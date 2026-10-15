@@ -46,8 +46,8 @@ async function scan() {
     L.timed('News · top stories', () => L.googleNewsTop()),
     L.timed('Know Your Meme', () => L.kymNews()),
     L.timed('Kick clips', () => L.kickClips()),
-    L.timed('Reddit animals', () => L.redlib('aww+AnimalsBeingBros+rarepuppers+raccoons+AnimalsBeingDerps+Eyebleach+natureismetal', 'reddit-animals')),
-    L.timed('Reddit internet', () => L.redlib('interestingasfuck+Damnthatsinteresting+nextfuckinglevel+InternetIsBeautiful+technology+artificial+memes+PublicFreakout', 'reddit-internet')),
+    L.timed('Reddit animals', () => L.redlib('aww+AnimalsBeingBros+rarepuppers+Eyebleach', 'reddit-animals')),
+    L.timed('Reddit internet', () => L.redlib('interestingasfuck+Damnthatsinteresting+nextfuckinglevel+InternetIsBeautiful', 'reddit-internet')),
     ...NEWS.map(([q, cat]) => L.timed('News · ' + cat, () => L.googleNews(q, cat))),
   ]);
 
@@ -149,7 +149,7 @@ module.exports = async (req, res) => {
   res.setHeader('cache-control', 'no-store');
   const force = req.query && req.query.fresh === '1';
   try {
-    if (!force && cache.body && Date.now() - cache.at < 90 * 1000) { res.setHeader('x-radar-cache', 'hit'); return res.status(200).end(cache.body); }
+    if (!force && cache.body && Date.now() - cache.at < 60 * 1000) { res.setHeader('x-radar-cache', 'hit'); return res.status(200).end(cache.body); }
     const out = await scan();
     cache = { at: Date.now(), body: JSON.stringify(out) };
     res.setHeader('x-radar-cache', 'miss');

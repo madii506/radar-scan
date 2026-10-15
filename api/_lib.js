@@ -201,26 +201,27 @@ async function redlib(sub, kind) {
     const title = unesc(t[2]).trim(); if (!title) continue;
     const score = parseInt((block.match(/class="post_score" title="(\d+)"/) || [])[1] || '0', 10);
     const comments = parseInt((block.match(/class="post_comments" title="(\d+) comments?"/) || [])[1] || '0', 10);
-    let img = (block.match(/class="post_media_image[^"]*"[^>]*>\s*<img[^>]*src="([^"]+)"/) || block.match(/<a class="post_thumbnail"[^>]*>\s*<(?:img|svg)[^>]*(?:src|href)="([^"]+)"/) || [])[1] || null;
+    let img = (block.match(/class="post_media_image[^"]*"[^>]*>\s*<img[^>]*src="([^"]+)"/) || block.match(/<video[^>]*poster="([^"]+)"/) || block.match(/<a class="post_thumbnail"[^>]*>\s*<(?:img|svg)[^>]*(?:src|href)="([^"]+)"/) || [])[1] || null;
     if (img) { img = unesc(img); if (img.startsWith('/preview/pre/')) img = 'https://preview.redd.it/' + img.slice(13); else if (img.startsWith('/img/')) img = 'https://i.redd.it/' + img.slice(5); else if (img.startsWith('/')) img = 'https://safereddit.com' + img; }
     const when = (block.match(/title="([A-Z][a-z]{2} \d{1,2} \d{4}, \d{2}:\d{2}:\d{2} UTC)"/) || [])[1]; const tt = when ? Date.parse(when.replace(' UTC', ' GMT')) || null : null;
     const sr = (t[1].match(/^\/r\/([^/]+)/) || [])[1] || sub;
     out.push({ kind, title, url: 'https://www.reddit.com' + t[1], sub: sr, score, comments, t: tt, img, id });
   }
-  if (!out.length) throw new Error('no posts parsed');
+  if (!out.length) throw new Error('no posts parsed: ' + unesc((html.match(/<title>([^<]*)<\/title>/) || [])[1] || '').slice(0, 80));
   return out.slice(0, 40);
 }
 
 // Kick: the most-viewed clips today — streamer moments that are going viral right now
 async function kickClips() {
-  const j = await fetchJson('https://kick.com/api/v2/clips?sort=view&time=day', {}, 9000);
+  const j = await fetchJson('https://kick.com/api/v2/clips?sort=view&time=day', { headers: { accept: 'application/json,text/html,*/*', 'accept-language': 'en-US,en;q=0.9' } }, 9000);
   return (j.clips || []).map(c => { const ch = c.channel || {}; const slug = ch.slug || ch.username || ''; return { kind: 'kick', title: (c.title || '').trim() || (slug + ' clip'), url: slug ? `https://kick.com/${slug}?clip=${c.id}` : 'https://kick.com', img: c.thumbnail_url || null, views: c.view_count || c.views || 0, streamer: ch.username || slug, category: c.category && c.category.name || '', t: Date.parse(c.created_at || '') || null, duration: c.duration || null }; }).filter(c => c.title).slice(0, 30);
 }
 
 // Know Your Meme news feed: the memes KYM's editors say are popping right now (with pictures)
 async function kymNews() {
   const xml = await fetchText('https://knowyourmeme.com/newsfeed.rss', {}, 9000);
-  return xml.split('<item>').slice(1).map(i => { const d = unesc(tag(i, 'description')); const img = (d.match(/<img[^>]*src="([^"]+)"/) || [])[1] || null; return { kind: 'kym', title: unesc(tag(i, 'title')), url: tag(i, 'link'), t: Date.parse(tag(i, 'pubDate')) || null, img, desc: d.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240) }; }).filter(x => x.title).slice(0, 25);
+  const dec = x => String(x || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'");
+  return xml.split('<item>').slice(1).map(i => { const raw = dec(tag(i, 'description')); const img = (raw.match(/<img[^>]*src=["']([^"']+)["']/) || [])[1] || null; const d = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); return { kind: 'kym', title: unesc(tag(i, 'title')), url: tag(i, 'link'), t: Date.parse(tag(i, 'pubDate')) || null, img, desc: d.slice(0, 240) }; }).filter(x => x.title).slice(0, 25);
 }
 
 // Google News top stories (the big events of the hour)
