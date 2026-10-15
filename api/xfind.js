@@ -1,4 +1,4 @@
-// /api/xfind?q=<topic> → the real tweets Bing knows about a topic, with the best one read in full. Used by the page's "find a tweet" and for debugging.
+// /api/xfind?q=<topic> → a real tweet about a topic (needs X_BEARER or SERPER_KEY on the project; says so when neither is set)
 const L = require('./_lib');
 const cache = new Map();
 module.exports = async (req, res) => {
@@ -7,13 +7,13 @@ module.exports = async (req, res) => {
   res.setHeader('cache-control', 'no-store');
   const q = String(req.query && req.query.q || '').trim().slice(0, 120);
   if (!q) return res.status(400).end(JSON.stringify({ error: 'q' }));
+  const mode = L.tweetSearchMode();
+  if (!mode) return res.status(200).end(JSON.stringify({ q, mode: 'off', tweets: [], note: 'tweet search is off: add X_BEARER (X API v2) or SERPER_KEY (serper.dev) to the Vercel project' }));
   const k = q.toLowerCase(); const hit = cache.get(k); if (hit && Date.now() - hit.at < 30 * 60000) return res.status(200).end(hit.body);
   try {
-    const hits = await L.bingTweetIds(q, 4);
-    const ts = await Promise.all(hits.map(h => L.tweet(h.id).catch(() => null)));
-    const tweets = ts.filter(Boolean).sort((a, b) => (b.likes || 0) + (b.views || 0) / 50 - (a.likes || 0) - (a.views || 0) / 50);
-    const body = JSON.stringify({ q, hits, tweets });
+    const t = await L.tweetFor(q);
+    const body = JSON.stringify({ q, mode, tweets: t ? [t] : [] });
     cache.set(k, { at: Date.now(), body });
     res.status(200).end(body);
-  } catch (e) { res.status(200).end(JSON.stringify({ q, error: String(e.message || e).slice(0, 160), hits: [], tweets: [] })); }
+  } catch (e) { res.status(200).end(JSON.stringify({ q, mode, error: String(e.message || e).slice(0, 160), tweets: [] })); }
 };

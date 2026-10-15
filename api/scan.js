@@ -7,7 +7,7 @@ const tweetCache = new Map();
 const xCache = new Map(); // topic → best real tweet (or null)
 // small concurrency limiter so Bing is not hit 30 times at once
 let running = 0; const queue = [];
-function limit(fn) { return new Promise((resolve, reject) => { const run = () => { running++; fn().then(resolve, reject).finally(() => { running--; const n = queue.shift(); if (n) n(); }); }; running < 5 ? run() : queue.push(run); }); }
+function limit(fn) { return new Promise((resolve, reject) => { const run = () => { running++; fn().then(resolve, reject).finally(() => { running--; const n = queue.shift(); if (n) n(); }); }; running < 8 ? run() : queue.push(run); }); }
 async function tweetCached(id) {
   const hit = tweetCache.get(id); if (hit && Date.now() - hit.at < 15 * 60000) return hit.v;
   try { const v = await L.tweet(id); tweetCache.set(id, { at: Date.now(), v }); return v; } catch (e) { return { id, err: String(e.message || e).slice(0, 80) }; }
@@ -72,20 +72,25 @@ async function scan() {
   for (const n of news) if (n.ok) for (const o of n.data) push({ ...o });
   could.sort((a, b) => b.heat - a.heat || (b.t || 0) - (a.t || 0));
 
-  // a real tweet for every narrative: the deployers' own tweet when the thing is already launched, else Bing → fxtwitter (budgeted, cached 2h)
+  // the content behind every narrative, inline: the deployers' own tweet when the thing is already launched; a real tweet via X API / Serper when a key is set;
+  // and the source page's own preview (og title / description / image) so the story is readable without clicking (budgeted, cached)
   const MAIN = new Set(['ai', 'animals', 'github', 'tech', 'whitehouse', 'money', 'crypto']);
   const order = could.slice().sort((a, b) => (b.cats.some(c => MAIN.has(c)) - a.cats.some(c => MAIN.has(c))) || b.heat - a.heat);
-  let budget = 28; const jobs = [];
+  const mode = L.tweetSearchMode();
+  let budget = mode ? 24 : 0, pbudget = 36; const jobs = [];
   for (const o of order) {
     const key = N.norm(o.title.replace(/^[^/]+\//, ''));
     const own = (o.coins || []).map(c => N.tweetId(c.tw)).find(Boolean);
     const hit = xCache.get(key);
-    if (own) { jobs.push(tweetCached(own).then(t => { o.tweet = t && !t.err ? t : null; o.tweetSrc = 'deployer'; })); continue; }
-    if (hit && Date.now() - hit.at < 2 * 3600e3) { o.tweet = hit.v; o.tweetSrc = hit.v ? 'search' : null; continue; }
-    if (budget <= 0 || o.kind === 'coingecko') continue; budget--;
-    jobs.push(limit(() => L.tweetFor(key.slice(0, 80)).catch(() => null).then(t => { xCache.set(key, { at: Date.now(), v: t }); o.tweet = t; o.tweetSrc = t ? 'search' : null; })));
+    if (own) jobs.push(tweetCached(own).then(t => { o.tweet = t && !t.err ? t : null; o.tweetSrc = 'deployer'; }));
+    else if (hit && Date.now() - hit.at < 2 * 3600e3) { o.tweet = hit.v; o.tweetSrc = hit.v ? 'search' : null; }
+    else if (budget > 0 && o.kind !== 'coingecko') { budget--; jobs.push(limit(() => L.tweetFor(key.slice(0, 80)).catch(() => null).then(t => { xCache.set(key, { at: Date.now(), v: t }); o.tweet = t; o.tweetSrc = t ? 'search' : null; }))); }
+    // page preview for the source link (news article, repo, product, HN target)
+    const purl = o.kind === 'gtrend' ? ((o.news || [])[0] || {}).url : o.kind === 'market' || o.kind === 'xtrend' || o.kind === 'coingecko' ? null : (o.out || o.url);
+    if (purl && pbudget > 0 && !/news\.google\.com/.test(purl)) { pbudget--; jobs.push(limit(() => L.pagePreview(purl).then(p => { if (p) o.preview = p; }))); }
   }
   await Promise.all(jobs);
+  const tweetMode = mode || 'off';
 
   // clusters ↔ could-launch cross-reference
   const trendWords = new Map(); for (const o of could) if (o.kind === 'gtrend' || o.kind === 'xtrend') for (const w of N.words(o.title)) if (w.length >= 4) trendWords.set(w, o.title);
@@ -112,7 +117,7 @@ async function scan() {
   const stream = coins.slice(0, 80).map(c => ({ ...c, tid: N.tweetId(c.tw) }));
 
   return {
-    ts: now, window: win,
+    ts: now, window: win, tweetMode,
     sources: [chain, jrec, jtr, jorg, gt5, gtNew, dex, trUS, trGB, xt, poly, ph, gh, hn, cg, ...news].map(s => ({ name: s.name, ok: s.ok, n: s.ok && s.data && s.data.coins ? s.data.coins.length : s.n, ms: s.ms, err: s.err || null })),
     could: could.slice(0, 220), clusters, bids: bids.slice(0, 50), paid: dex.ok ? dex.data.slice(0, 40) : [], tweets, stream, coins: coins.map(c => ({ mint: c.mint, name: c.name, symbol: c.symbol, t: c.t, mc: c.mc, img: c.img, tw: c.tw, web: c.web, creator: c.creator, url: c.url })),
   };

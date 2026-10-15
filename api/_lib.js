@@ -200,24 +200,51 @@ async function tweet(id) {
   return { id, url: t.url || 'https://x.com/i/status/' + id, text: (t.text || '').slice(0, 2000), name: a.name || '', handle: a.screen_name || '', avatar: a.avatar_url || null, followers: a.followers || null, imgs: photos.concat(videos), video: (med.videos || [])[0] ? (med.videos[0].url || null) : null, views: t.views || null, likes: t.likes || null, rts: t.retweets || null, replies: t.replies || null, at: t.created_timestamp ? t.created_timestamp * 1000 : null, quote: q };
 }
 
-// find real tweets about a topic: Bing RSS `site:x.com "<q>"` (works from Vercel; DuckDuckGo, Brave and X syndication do not)
-async function bingTweetIds(q, n = 4) {
-  const xml = await fetchText('https://www.bing.com/search?q=' + encodeURIComponent('site:x.com "' + q + '"') + '&format=rss&cc=US&setlang=en', {}, 8000);
+// Real tweets about a topic. Every keyless route is closed from Vercel (Bing/Yandex return junk or challenges, DuckDuckGo/Brave/Bluesky 403/429,
+// X syndication 429, Nitter is dead after X's takedowns, xcancel 451). So this needs one key: X_BEARER (X API v2 recent search) or SERPER_KEY (serper.dev → fxtwitter).
+function tweetSearchMode() { return process.env.X_BEARER ? 'x-api' : process.env.SERPER_KEY ? 'serper' : null; }
+async function xApiSearch(q, n = 10) {
+  const url = 'https://api.x.com/2/tweets/search/recent?query=' + encodeURIComponent(q + ' -is:retweet -is:reply') + '&max_results=' + Math.max(10, Math.min(50, n)) + '&tweet.fields=public_metrics,created_at,attachments,entities&expansions=author_id,attachments.media_keys&user.fields=name,username,profile_image_url,public_metrics&media.fields=url,preview_image_url,type';
+  const j = await fetchJson(url, { headers: { authorization: 'Bearer ' + process.env.X_BEARER } }, 9000);
+  const users = {}; for (const u of (j.includes && j.includes.users) || []) users[u.id] = u;
+  const media = {}; for (const m of (j.includes && j.includes.media) || []) media[m.media_key] = m;
+  return (j.data || []).map(t => { const u = users[t.author_id] || {}; const pm = t.public_metrics || {}; const keys = (t.attachments && t.attachments.media_keys) || []; const imgs = keys.map(k => media[k]).filter(Boolean).map(m => m.url || m.preview_image_url).filter(Boolean);
+    return { id: t.id, url: 'https://x.com/' + (u.username || 'i') + '/status/' + t.id, text: t.text || '', name: u.name || '', handle: u.username || '', avatar: u.profile_image_url ? u.profile_image_url.replace('_normal', '_200x200') : null, followers: u.public_metrics && u.public_metrics.followers_count || null, imgs, views: pm.impression_count || null, likes: pm.like_count || 0, rts: pm.retweet_count || 0, replies: pm.reply_count || 0, at: Date.parse(t.created_at) || null, quote: null }; });
+}
+async function serperTweetIds(q, n = 5) {
+  const j = await fetchJson('https://google.serper.dev/search', { method: 'POST', headers: { 'x-api-key': process.env.SERPER_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ q: 'site:x.com "' + q + '"', num: 10, tbs: 'qdr:w' }) }, 9000);
   const ids = []; const seen = new Set();
-  for (const item of xml.split('<item>').slice(1)) {
-    const link = unesc(tag(item, 'link')); const m = link.match(/(?:x|twitter)\.com\/([A-Za-z0-9_]+)\/status\/(\d+)/);
-    if (m && !seen.has(m[2]) && m[1] !== 'i' && m[1] !== 'search') { seen.add(m[2]); ids.push({ id: m[2], handle: m[1], title: unesc(tag(item, 'title')), desc: unesc(tag(item, 'description')).slice(0, 200) }); }
-    if (ids.length >= n) break;
-  }
+  for (const r of (j.organic || [])) { const m = String(r.link || '').match(/(?:x|twitter)\.com\/([A-Za-z0-9_]+)\/status\/(\d+)/); if (m && !seen.has(m[2]) && m[1] !== 'i') { seen.add(m[2]); ids.push({ id: m[2], handle: m[1] }); if (ids.length >= n) break; } }
   return ids;
 }
-// best real tweet for a topic: first Bing hit that fxtwitter can read, preferring the one with the most likes among the first 3
 async function tweetFor(q) {
-  const hits = await bingTweetIds(q, 3); if (!hits.length) return null;
-  const ts = await Promise.all(hits.map(h => tweet(h.id).catch(() => null)));
-  const ok = ts.filter(Boolean); if (!ok.length) return null;
+  const mode = tweetSearchMode(); if (!mode) return null;
+  let ok = [];
+  if (mode === 'x-api') ok = await xApiSearch(q, 10);
+  else { const hits = await serperTweetIds(q, 4); ok = (await Promise.all(hits.map(h => tweet(h.id).catch(() => null)))).filter(Boolean); }
+  if (!ok.length) return null;
   ok.sort((a, b) => (b.likes || 0) + (b.views || 0) / 50 - (a.likes || 0) - (a.views || 0) / 50);
   return ok[0];
 }
 
-module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, bingTweetIds, tweetFor };
+// what a link says, without clicking it: og:title / description / image (works from Vercel for most news sites, GitHub, Product Hunt)
+const previewCache = new Map();
+async function pagePreview(url) {
+  if (!/^https?:\/\//.test(url || '')) return null;
+  const hit = previewCache.get(url); if (hit && Date.now() - hit.at < 6 * 3600e3) return hit.v;
+  let v = null;
+  try {
+    const html = (await fetchText(url, { headers: { accept: 'text/html,*/*' } }, 7000)).slice(0, 300000);
+    const meta = (p) => { const m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']' + p + '["\'][^>]+content=["\']([^"\']*)["\']', 'i')) || html.match(new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]+(?:property|name)=["\']' + p + '["\']', 'i')); return m ? unesc(m[1]).trim() : ''; };
+    const title = meta('og:title') || meta('twitter:title') || unesc((html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '');
+    const desc = meta('og:description') || meta('description') || meta('twitter:description');
+    let img = meta('og:image') || meta('twitter:image'); if (img && img.startsWith('/')) { try { img = new URL(img, url).href; } catch { img = ''; } }
+    const site = meta('og:site_name') || new URL(url).hostname.replace(/^www\./, '');
+    const at = Date.parse(meta('article:published_time') || '') || null;
+    if (title || desc) v = { title: title.slice(0, 160), desc: desc.slice(0, 500), img: img || null, site, at, url };
+  } catch (e) { v = null; }
+  previewCache.set(url, { at: Date.now(), v });
+  return v;
+}
+
+module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, tweetFor, tweetSearchMode, pagePreview };
