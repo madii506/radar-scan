@@ -158,6 +158,7 @@ textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-ra
 
 <div class="wrap"><main>
   <section id="s-picks"><div class="eyebrow"><b>00</b> launch <span id="picks-n"></span><em class="why">Ready to post: the image, the finished tweet and the link for each of the best open narratives right now — in your lanes, fresh, with real interactions, nothing with a coin on pump.fun yet. Copy, create on pump.fun, post. ★ keeps one, ✕ throws it out, <i>details ▸</i> shows the story and the tweet behind it.</em></div>
+    <div class="count" id="meta" style="margin:0 0 10px;color:var(--dim)"></div>
     <div class="cats" id="cats"></div>
     <div id="short-wrap" style="display:none"><div class="count">★ your shortlist</div><div class="pgrid" id="short"></div></div>
     <div class="pgrid" id="picks"></div>
@@ -210,7 +211,7 @@ Ek5FQxXfqNefNghCkrAoB1H3JCkbsUEtBpdgPzv8impv jumboorca · j7 sniper
 4aiCCg5WXQ2pVyHsPeYMxLXWMjGnx4eSFPjnLHdvfjPu WildChadMeteor
 BMAyvk2fg6YeLvjENaEgHHLEZsrW53eixfSC5NfRhMMp collector (no launches)
 AqT21DFMA9MJW8tKXQdnBDZZ7cm3NXq9gPWs6g2z78R5 collector (no launches)`;
-const PERIOD=300, RECENT_EVERY=30, WIN_HOURS=3, WIN_MAX=2500;
+const PERIOD=180, RECENT_EVERY=30, WIN_HOURS=3, WIN_MAX=2500;
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 let seen=ls.get('radar.seen',{}), catsOn=new Set(ls.get('radar.cats',DEFAULT_ON)), showTaken=ls.get('radar.taken',false), minHeat=ls.get('radar.heat',0), couldLimit=40;
 let hidden=ls.get('radar.hide',{}), starred=ls.get('radar.star',{}), sortBy=ls.get('radar.sort','pick'), showHidden=false, onlyTweet=ls.get('radar.onlytweet',false);
@@ -260,7 +261,7 @@ const fmtN=n=>n==null?'':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)
 function kitFor(o){
   const n=(o.news||[])[0]||{};
   const raw=o.title.replace(/^[^/]+\//,'').replace(/\s*\([^)]*\)\s*$/,'').trim();
-  const name=raw.length>32?raw.split(/[:–—-]/)[0].trim().slice(0,32):raw;
+  let name=raw.length>32?raw.split(/[:–—-]/)[0].trim():raw; if(name.length>32){name=name.slice(0,33);name=name.slice(0,name.lastIndexOf(' ')>12?name.lastIndexOf(' '):32).trim()}
   const ws=name.split(/[\s\-_:/]+/).filter(w=>/[a-z0-9]/i.test(w)&&!/^(the|a|an|of|and|to|in|for|on|is|vs|at|by)$/i.test(w));
   const ticker=tick(ws.length>=2&&ws[0].length<=3?ws[0]+ws[1]:(ws[0]||name));
   const tw=o.tweet&&!o.tweet.err?o.tweet:null;
@@ -319,7 +320,7 @@ function cardFor(o,full){
   const id='k:'+o.kind+':'+o.title;const open=o.launched===0;const n=(o.news||[])[0]||{};const k=kitFor(o);const q=o.title.replace(/^[^/]+\//,'');const key=keyOf(o);
   const f=esc((o.title+' '+(o.desc||'')+' '+(o.news||[]).map(x=>x.title).join(' ')+' '+o.cats.join(' ')+' '+(k.tw?k.tw.text+' @'+k.tw.handle:'')).toLowerCase());
   const tri=`<div class="tri"><button title="shortlist" class="${starred[key]?'on':''}" onclick='toggleStar(${JSON.stringify(key)})'>★</button><button title="hide" onclick='toggleHide(${JSON.stringify(key)})'>${hidden[key]?'↩':'✕'}</button></div>`;
-  const tags=`${isNew(id)?'<span class="tag new">NEW</span>':''}<span class="tag ${open?'open':'taken'}">${open?'open':o.launched+' coins'}</span>${catTags(o.cats)}<span class="tag" style="text-transform:none">${KIND[o.kind]||o.kind}</span><span class="tag heat ${o.heat>=10?'hot':''}">heat ${o.heat}</span>`;
+  const tags=`${isNew(id)?'<span class="tag new">NEW</span>':''}<span class="tag ${open?'open':'taken'}">${open?'open':o.launched+' coins'}</span>${o.meta?`<span class="tag tr">${esc(o.meta)}</span>`:''}${catTags(o.cats)}<span class="tag" style="text-transform:none">${KIND[o.kind]||o.kind}</span><span class="tag heat ${o.heat>=10?'hot':''}">heat ${o.heat}</span>`;
   const kitHtml=`${o.news&&o.news.length>1?`<div class="m">${o.news.slice(1,3).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.src||'news')}: ${esc(x.title.slice(0,80))}</a>`).join('<br>')}</div>`:''}
     ${xBox(o,k)}
     <div class="nm">name <b>${esc(k.name)}</b> · ticker <b>$${esc(k.ticker)}</b> · twitter <a href="${esc(k.tw?k.tw.url:'https://x.com/search?q='+encodeURIComponent(q)+'&f=live')}" target="_blank" rel="noopener">${k.tw?'the tweet above':'none yet'}</a> · website <a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(k.src.replace(/^https?:\/\/(www\.)?/,'').slice(0,44))}</a>${o.coins&&o.coins.length?` · on pump: ${o.coins.slice(0,3).map(coinLine).join(', ')}`:''}</div>
@@ -360,7 +361,14 @@ function renderSort(){$('#sortrow').innerHTML=`sort <button class="cat ${sortBy=
 function renderCould(){
   const el=$('#could');const all=(data&&data.could)||[];renderSort();
   const wa=winArr();const useWin=wa.length>((data&&data.coins)||[]).length;const now=Date.now();
-  const rows=all.map(o=>{let r=o;if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);r={...o,launched:m.n,coins:m.coins}}r.pick=NARR.pickScore(r,now);return r});
+  // the meta right now: what is being launched by many wallets and what is getting bids
+  const base=wa.length>((data&&data.coins)||[]).length?wa:((data&&data.coins)||[]);
+  const cls=base.length?NARR.buildClusters(base,now).slice(0,12):(data.clusters||[]).slice(0,12);
+  const metaWords=new Map();
+  for(const cl of cls){const label=cl.kind==='tw'?(cl.coins[0]||{}).name||'':cl.label;for(const w of NARR.words(label))if(w.length>=4&&!NARR.CHRONIC.has(w))metaWords.set(w,'launching: '+label+' ×'+cl.count)}
+  for(const b of (data.bids||[]).slice(0,25))for(const w of NARR.words(b.name+' '+b.symbol))if(w.length>=4&&!NARR.CHRONIC.has(w))metaWords.set(w,'getting bids: '+b.name);
+  $('#meta').innerHTML=cls.length||(data.bids||[]).length?'meta now · launching: '+cls.slice(0,8).map(cl=>`<a href="#s-narr" style="color:var(--amb)">${esc(cl.kind==='tw'?((cl.coins[0]||{}).name||'tweet'):cl.label)}</a> ×${cl.count}`).join(' · ')+(data.bids&&data.bids.length?' · bids: '+data.bids.slice(0,6).map(b=>`<a href="#s-bids" style="color:var(--grn)">${esc(b.name)}</a>`).join(' · '):''):'';
+  const rows=all.map(o=>{let r=o;if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);r={...o,launched:m.n,coins:m.coins}}const ws=NARR.words(r.title.replace(/^[^/]+\//,''));const hit=ws.map(w=>metaWords.get(w)).find(Boolean);r.meta=hit||null;r.pick=NARR.pickScore(r,now)*(hit?1.5:1);return r});
   const open=rows.filter(o=>o.launched===0).length;
   // 00 picks: in your lanes, not hidden, launchable
   const picks=rows.filter(o=>o.pick>0&&o.cats.some(c=>catsOn.has(c))&&!hidden[keyOf(o)]&&!starred[keyOf(o)]).sort((a,b)=>b.pick-a.pick).slice(0,8);
