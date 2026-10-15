@@ -241,10 +241,13 @@ async function pagePreview(url) {
     let img = meta('og:image') || meta('twitter:image'); if (img && img.startsWith('/')) { try { img = new URL(img, url).href; } catch { img = ''; } }
     const site = meta('og:site_name') || new URL(url).hostname.replace(/^www\./, '');
     const at = Date.parse(meta('article:published_time') || '') || null;
-    if (title || desc) v = { title: title.slice(0, 160), desc: desc.slice(0, 500), img: img || null, site, at, url };
+    // tweets embedded in the article (news sites embed the source post) — real tweets about the story, no search key needed
+    const tweets = []; const seen = new Set(); const re = /(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status(?:es)?\/(\d{15,20})/g; let m;
+    while ((m = re.exec(html)) && tweets.length < 4) { if (/^(i|intent|share|search|home|hashtag)$/i.test(m[1]) || seen.has(m[2])) continue; seen.add(m[2]); tweets.push({ id: m[2], handle: m[1] }); }
+    if (title || desc || tweets.length) v = { title: title.slice(0, 160), desc: desc.slice(0, 500), img: img || null, site, at, url, tweets };
   } catch (e) { v = null; }
   previewCache.set(url, { at: Date.now(), v });
   return v;
 }
 
-module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, tweetFor, tweetSearchMode, pagePreview };
+module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, tweetFor, tweetSearchMode, pagePreview, previewCache };
