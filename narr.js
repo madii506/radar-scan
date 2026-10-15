@@ -67,11 +67,14 @@
     entertainment: /\b(movie|movies|film|films|netflix|hbo|disney|marvel|dc|star wars|trailer|album|song|songs|singer|rapper|rap|concert|tour|grammy|grammys|oscar|oscars|emmy|emmys|actor|actress|celebrity|kardashian|jenner|swift|taylor swift|beyonce|drake|kanye|ye|bieber|rihanna|bad bunny|tv|series|season|episode|anime|manga|pokemon|pokémon|nintendo|playstation|ps5|xbox|game|gaming|gamer|fortnite|minecraft|roblox|gta|twitch|streamer|streamers|kai cenat|mrbeast|ishowspeed|xqc|podcast|rogan|comedian|comedy|snl|late night|bratz|barbie|lego|toy|toys|doll|dolls|wedding|divorce|dating|pregnant|baby|died|dies|death|rip|funeral|tragedy|arrested|arrest|lawsuit|sued|scandal|cheating|affair|viral|meme|memes|tiktoker|influencer|onlyfans)\b/i,
   };
   const CAT_ORDER = ['animals', 'ai', 'crypto', 'github', 'whitehouse', 'money', 'tech', 'sports', 'entertainment'];
-  function categorize(text, kind) {
-    const t = ' ' + String(text || '').toLowerCase() + ' '; const out = [];
+  function categorize(text, kind, extra) {
+    const t = ' ' + String(text || '').toLowerCase() + ' '; let out = [];
     for (const c of CAT_ORDER) if (CATS[c].test(t)) out.push(c);
+    // "club - club" / "a vs b" titles are matches, whatever the headlines mention
+    if (/\s(-|–|vs\.?|v)\s/.test(t) && (out.includes('sports') || !out.length) && kind === 'gtrend') out = ['sports'];
+    if (!out.length && extra) { const e = ' ' + String(extra).toLowerCase() + ' '; for (const c of CAT_ORDER) if (CATS[c].test(e)) out.push(c); }
     if (kind === 'github' && !out.includes('github')) out.unshift('github');
-    if ((kind === 'hn' || kind === 'producthunt') && !out.includes('tech') && !out.includes('ai')) out.push('tech');
+    if (kind === 'producthunt' && !out.includes('tech') && !out.includes('ai')) out.push('tech');
     if ((kind === 'dex' || kind === 'gecko' || kind === 'jup' || kind === 'coingecko') && !out.includes('crypto')) out.unshift('crypto');
     if (kind === 'market' && !out.length) out.push('money');
     if (!out.length) out.push('other');
