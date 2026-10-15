@@ -83,6 +83,8 @@ section{margin-bottom:34px;min-width:0}
 .card.pick .det summary{cursor:pointer;font:11.5px/1 var(--mono);color:var(--blu);list-style:none}
 .card.pick .det summary::-webkit-details-marker{display:none}
 .card.pick .imgtools{display:flex;gap:8px;margin-top:6px;font:11px/1 var(--mono);flex-wrap:wrap}
+.card.pick .isrc{font:10.5px/1.3 var(--mono);color:var(--mute);margin-top:5px;width:200px}
+.alts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;width:200px}.alts img{width:44px;height:44px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;opacity:.7;background:var(--bg2)}.alts img:hover{opacity:1}.alts img.on{border-color:var(--amb);opacity:1}
 .card.pick .imgtools a,.card.pick .imgtools button{color:var(--dim);background:none;border:0;padding:0;cursor:pointer;font:11px/1 var(--mono)}
 .card.pick .imgtools a:hover,.card.pick .imgtools button:hover{color:var(--fg)}
 .card.pick .t{font-size:17px;line-height:1.25;padding-right:64px;margin-top:2px}
@@ -94,7 +96,7 @@ section{margin-bottom:34px;min-width:0}
 .card.row .tri{top:8px}.card.row .tri button{width:24px;height:24px}
 .card.row .m a{color:var(--dim)}
 .card.row .kitb{background:none;border:0;padding:0;color:var(--blu);cursor:pointer;font:11.5px/1 var(--mono)}
-@media(max-width:700px){.card.pick{grid-template-columns:110px minmax(0,1fr)}.card.pick .big,.card.pick .noimg{width:110px;height:110px}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lab{grid-column:1/-1}}
+@media(max-width:700px){.card.pick{grid-template-columns:110px minmax(0,1fr)}.card.pick .big,.card.pick .noimg{width:110px;height:110px}.alts,.card.pick .isrc{width:110px}.alts img{width:32px;height:32px}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lab{grid-column:1/-1}}
 @media(max-width:480px){.grid{grid-template-columns:minmax(0,1fr)}}
 .card.kit{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .kit .big{width:96px;height:96px;border-radius:10px;object-fit:cover;background:var(--bg2);border:1px solid var(--line);display:block}
@@ -216,7 +218,22 @@ const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.par
 let seen=ls.get('radar.seen',{}), catsOn=new Set(ls.get('radar.cats',DEFAULT_ON)), showTaken=ls.get('radar.taken',false), minHeat=ls.get('radar.heat',0), couldLimit=40;
 let hidden=ls.get('radar.hide',{}), starred=ls.get('radar.star',{}), sortBy=ls.get('radar.sort','pick'), showHidden=false, onlyTweet=ls.get('radar.onlytweet',false);
 const keyOf=o=>o.kind+':'+o.title;
-let data=null,nextAt=0;
+let data=null,nextAt=0,staleTries=0;
+// per-narrative enrichment fetched by the page after render (so the scan itself stays fast): the story behind the link, a tweet embedded in it, more pictures
+let enr=ls.get('radar.enr',{}), imgSel=ls.get('radar.imgsel',{}), lastRows=new Map(), enrQ=[], enrBusy=0, enrInflight=new Set();
+function saveEnr(){const now=Date.now();const ks=Object.keys(enr).filter(k=>now-(enr[k].at||0)<6*3600e3).sort((a,b)=>(enr[b].at||0)-(enr[a].at||0)).slice(0,300);const o={};for(const k of ks)o[k]=enr[k];enr=o;ls.set('radar.enr',enr)}
+function withEnr(o){const e=enr[keyOf(o)];if(!e)return o;const r={...o};if(e.preview&&!r.preview)r.preview=e.preview;if(e.tweet&&(!r.tweet||r.tweet.err)){r.tweet=e.tweet;r.tweetSrc=r.tweetSrc||'article'}if(e.images&&e.images.length)r.images=e.images;return r}
+function needEnrich(o){const e=enr[keyOf(o)]||{};return (o.purl&&!e.pAt)||!e.iAt}
+async function enrich(o,wantImgs){const key=keyOf(o);if(enrInflight.has(key))return;enrInflight.add(key);const e=enr[key]||(enr[key]={at:Date.now()});e.at=Date.now();
+  try{
+    if(o.purl&&!e.pAt){try{const r=await fetch('/api/preview?u='+encodeURIComponent(o.purl));const j=await r.json();if(j.preview)e.preview=j.preview;if(j.tweet)e.tweet=j.tweet}catch(err){}e.pAt=Date.now()}
+    if(!e.iAt||wantImgs){const k=kitFor(withEnr(o));if(wantImgs||k.imgs.filter(c=>!/thumb/.test(c.src)).length<2){try{const r=await fetch('/api/image?q='+encodeURIComponent(k.name));const j=await r.json();e.images=j.images||[]}catch(err){}}e.iAt=Date.now()}
+  }finally{enrInflight.delete(key);saveEnr();rerender(key)}}
+function queueEnrich(list){for(const o of list){const key=keyOf(o);if(enrInflight.has(key)||enrQ.some(x=>keyOf(x)===key)||!needEnrich(o))continue;enrQ.push(o)}pumpEnr()}
+function pumpEnr(){while(enrBusy<4&&enrQ.length){const o=enrQ.shift();enrBusy++;enrich(o).finally(()=>{enrBusy--;pumpEnr()})}}
+function rerender(key){const row=lastRows.get(key);if(!row)return;document.querySelectorAll('.card.kit[data-key]').forEach(el=>{if(el.dataset.key!==key)return;const t=document.createElement('template');t.innerHTML=cardFor(withEnr(row),el.classList.contains('pick'));el.replaceWith(t.content.firstElementChild)});applyFilter()}
+function pickImg(key,url){imgSel[key]=url;ls.set('radar.imgsel',imgSel);rerender(key)}
+function moreImgs(key){const row=lastRows.get(key);if(!row)return;$('#live').textContent='looking for pictures of '+kitFor(row).name;enrich(row,true)}
 // the client-side window of pump.fun creates: grows every 30s, kept for 3h
 let win=new Map(); for(const c of ls.get('radar.win',[])) if(c&&c.mint) win.set(c.mint,c);
 function winArr(){return [...win.values()]}
@@ -265,7 +282,18 @@ function kitFor(o){
   const ws=name.split(/[\s\-_:/]+/).filter(w=>/[a-z0-9]/i.test(w)&&!/^(the|a|an|of|and|to|in|for|on|is|vs|at|by)$/i.test(w));
   const ticker=tick(ws.length>=2&&ws[0].length<=3?ws[0]+ws[1]:(ws[0]||name));
   const tw=o.tweet&&!o.tweet.err?o.tweet:null;
-  const img=o.img||n.img||(tw&&tw.imgs&&tw.imgs[0])||(o.preview&&o.preview.img)||'';
+  // every real picture we have for it, best first: the tweet's media, the story's own pictures, the source's picture, wikipedia / commons, and google's tiny thumbs last
+  const tiny=u=>/gstatic\.com\/images\?q=tbn/.test(u||'');
+  const imgs=[];const push=(u,src)=>{if(u&&/^https?:/.test(u)&&!imgs.some(c=>c.url===u))imgs.push({url:u,src})};
+  if(tw&&tw.imgs)tw.imgs.forEach(u=>push(u,'the tweet'));
+  if(o.preview){(o.preview.imgs||[]).forEach(u=>push(u,'the story · '+(o.preview.site||'')));push(o.preview.img,'the story · '+(o.preview.site||''))}
+  if(o.img&&!tiny(o.img))push(o.img,KIND[o.kind]||o.kind);
+  (o.news||[]).forEach(x=>{if(x.img&&!tiny(x.img))push(x.img,x.src||'news')});
+  (o.images||[]).forEach(x=>push(x.url,x.src+(x.title?' · '+x.title:'')));
+  if(o.img&&tiny(o.img))push(o.img,'google thumb (small)');
+  (o.news||[]).forEach(x=>{if(x.img&&tiny(x.img))push(x.img,'google thumb (small)')});
+  const sel=imgSel[keyOf(o)];const chosen=(sel&&imgs.find(c=>c.url===sel))||imgs[0];
+  const img=chosen?chosen.url:'';
   const src=o.kind==='gtrend'?(n.url||o.url):(o.out||o.url);
   let line='';
   if(o.kind==='gtrend')line=n.title?n.title.slice(0,120):`${o.traffic} searches in the last hours`;
@@ -282,7 +310,7 @@ function kitFor(o){
   const story=o.preview&&o.preview.desc?o.preview.desc.split(/(?<=[.!?])\s/)[0].slice(0,140):'';
   const hook=(story||line).replace(/\s+/g,' ').trim().replace(/[.!?]+$/,'');
   const tweet=`${name}\n${hook}.\n$${ticker}\n${tw?tw.url:src}`;
-  return {name,ticker,img,src,tweet,tw};
+  return {name,ticker,img,imgSrc:chosen?chosen.src:'',imgs,src,tweet,tw};
 }
 function xBox(o,k){
   const t=k.tw;const q=o.title.replace(/^[^/]+\//,'');const p=o.preview;const mode=(data&&data.tweetMode)||'off';
@@ -330,7 +358,9 @@ function cardFor(o,full){
     const ptw=k.tw?k.tw.url:'';const web=k.src;
     return `<div class="card kit pick" data-key="${esc(key)}" data-f="${f}">
       <div>${k.img?`<a href="${esc(k.img)}" target="_blank" rel="noopener" title="open image"><img class="big" src="${esc(k.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'no picture — take one from the tweet or the source'}))"></a>`:`<div class="noimg">no picture —<br>take one from the source</div>`}
-      <div class="imgtools">${k.img?`<a href="${esc(k.img)}" target="_blank" rel="noopener" download>open / save ↗</a><button onclick='copyBrief(${JSON.stringify(k.img)})'>copy image url</button>`:''}<a href="https://x.com/search?q=${encodeURIComponent(q)}&f=media" target="_blank" rel="noopener">more images ↗</a></div></div>
+      ${k.imgs.length>1?`<div class="alts">${k.imgs.slice(0,8).map(c=>`<img src="${esc(c.url)}" title="${esc(c.src)}" class="${c.url===k.img?'on':''}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" onclick='pickImg(${JSON.stringify(key)},${JSON.stringify(c.url)})'>`).join('')}</div>`:''}
+      ${k.img?`<div class="isrc">picture: ${esc(k.imgSrc)}${k.imgs.length>1?' · '+(k.imgs.length-1)+' more, click to switch':''}</div>`:''}
+      <div class="imgtools">${k.img?`<a href="${esc(k.img)}" target="_blank" rel="noopener" download>open / save ↗</a><button onclick='copyBrief(${JSON.stringify(k.img)})'>copy image url</button>`:''}<button onclick='moreImgs(${JSON.stringify(key)})'>find pictures</button><a href="https://x.com/search?q=${encodeURIComponent(q)}&f=media" target="_blank" rel="noopener">x images ↗</a></div></div>
       <div>${tri}<div style="margin-bottom:4px">${tags}</div><div class="t"><a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(o.title)}</a></div><div class="why">${whyLine(o)}</div>
       <div class="lbox">
         <div class="lrow"><div class="lab">name</div><div class="val"><b>${esc(k.name)}</b> <span class="tk">$${esc(k.ticker)}</span></div><button class="cpb" onclick='copyBrief(${JSON.stringify(k.name)})'>copy</button></div>
@@ -369,7 +399,8 @@ function renderCould(){
   for(const cl of cls){const label=(cl.kind==='tw'||cl.kind==='u')?(cl.coins[0]||{}).name||'':cl.label;for(const w of NARR.words(label))if(w.length>=4&&!NARR.CHRONIC.has(w))metaWords.set(w,'launching: '+label+' ×'+cl.count)}
   for(const b of (data.bids||[]).slice(0,25))for(const w of NARR.words(b.name+' '+b.symbol))if(w.length>=4&&!NARR.CHRONIC.has(w))metaWords.set(w,'getting bids: '+b.name);
   $('#meta').innerHTML=cls.length||(data.bids||[]).length?'meta now · launching: '+cls.slice(0,8).map(cl=>`<a href="#s-narr" style="color:var(--amb)">${esc((cl.kind==='tw'?((cl.coins[0]||{}).name||'tweet'):cl.kind==='u'?cl.label.split('/').slice(0,2).join('/'):cl.label).slice(0,40))}</a> ×${cl.count}`).join(' · ')+(data.bids&&data.bids.length?' · bids: '+data.bids.slice(0,6).map(b=>`<a href="#s-bids" style="color:var(--grn)">${esc(b.name)}</a>`).join(' · '):''):'';
-  const rows=all.map(o=>{let r=o;if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);r={...o,launched:m.n,coins:m.coins}}const ws=NARR.words(r.title.replace(/^[^/]+\//,''));const hit=ws.map(w=>metaWords.get(w)).find(Boolean);r.meta=hit||null;r.pick=NARR.pickScore(r,now)*(hit?1.5:1);return r});
+  const rows=all.map(o=>{let r=withEnr(o);if(r===o)r={...o};if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);r.launched=m.n;r.coins=m.coins}const ws=NARR.words(r.title.replace(/^[^/]+\//,''));const hit=ws.map(w=>metaWords.get(w)).find(Boolean);r.meta=hit||null;r.pick=NARR.pickScore(r,now)*(hit?1.5:1);return r});
+  lastRows=new Map(rows.map(r=>[keyOf(r),r]));
   const open=rows.filter(o=>o.launched===0).length;
   // 00 picks: in your lanes, not hidden, launchable
   const picks=rows.filter(o=>o.pick>0&&o.cats.some(c=>catsOn.has(c))&&!hidden[keyOf(o)]&&!starred[keyOf(o)]).sort((a,b)=>b.pick-a.pick).slice(0,8);
@@ -377,6 +408,7 @@ function renderCould(){
   $('#picks-n').textContent=picks.length?`${picks.length} ready · ${open} open things in total`:'';
   const stars=rows.filter(o=>starred[keyOf(o)]);
   $('#short-wrap').style.display=stars.length?'':'none';$('#short').innerHTML=stars.map(o=>cardFor(o,true)).join('');
+  queueEnrich(picks.concat(stars,rows.filter(o=>expanded.has(keyOf(o)))));
   // 01 the list
   let vis=rows.filter(o=>o.cats.some(c=>catsOn.has(c))&&o.heat>=minHeat&&(showTaken||o.launched===0)&&(showHidden?true:!hidden[keyOf(o)])&&(!onlyTweet||(o.tweet&&!o.tweet.err)));
   if(sortBy==='new')vis.sort((a,b)=>(b.t||0)-(a.t||0));else if(sortBy==='likes')vis.sort((a,b)=>((b.tweet&&b.tweet.likes)||0)-((a.tweet&&a.tweet.likes)||0));else if(sortBy==='pick')vis.sort((a,b)=>b.pick-a.pick);
@@ -438,14 +470,18 @@ function render(d){
   renderCould();renderNarr(d);renderBids(d);renderPaid(d);renderStream();
   const ids=[...document.querySelectorAll('.tag.new')].length;$('#newc').textContent=ids+' new';$('#newc').classList.toggle('zero',!ids);document.title=(ids?'('+ids+') ':'')+'RADAR';
   const all=[];(d.could||[]).forEach(o=>all.push('k:'+o.kind+':'+o.title));(d.clusters||[]).forEach(c=>all.push('cl:'+c.key));(d.bids||[]).forEach(p=>all.push('b:'+p.mint));(d.paid||[]).forEach(p=>all.push('p:'+p.mint));[...document.querySelectorAll('[data-nid]')].forEach(e=>all.push(e.dataset.nid));markSeen(all);
-  $('#when').innerHTML='scan <b>'+hhmm(d.ts)+'</b>';updWin();applyFilter();$('#live').textContent='scan updated '+hhmm(d.ts);
+  $('#when').innerHTML='scan <b>'+hhmm(d.ts)+'</b>'+(d.took?' · '+(d.took.total/1000).toFixed(1)+'s':'');updWin();applyFilter();$('#live').textContent='scan updated '+hhmm(d.ts);
+  ls.set('radar.last',{...d,coins:[],stream:[]});
 }
 function updWin(){const w=winInfo();$('#win').innerHTML=w.n?`window <b>${w.n}</b> coins / <b>${w.minutes}</b> min`:'window empty'}
-async function scan(fresh){
-  $('#when').textContent='scanning…';
-  try{const r=await fetch('/api/scan'+(fresh?'?fresh=1':''),{cache:'no-store'});const j=await r.json();if(j.error)throw new Error(j.error);render(j)}
+async function scan(fresh,quiet){
+  if(!quiet)$('#when').textContent=data?'scan <b>'+hhmm(data.ts)+'</b> · refreshing…':'scanning…';
+  try{const r=await fetch('/api/scan'+(fresh?'?fresh=1':''),{cache:'no-store'});const st=r.headers.get('x-radar-cache');const j=await r.json();if(j.error)throw new Error(j.error);
+    if(!data||j.ts>=data.ts)render(j);
+    // the server answers at once with the last scan while a fresh one runs; come back for the fresh one
+    if(st==='stale'&&staleTries<3){staleTries++;$('#live').textContent='showing scan '+hhmm(j.ts)+' · a fresh one is running';setTimeout(()=>scan(false,true),12000)}else staleTries=0}
   catch(e){$('#when').textContent='scan failed: '+e.message}
-  nextAt=Date.now()+PERIOD*1000;
+  if(!quiet)nextAt=Date.now()+PERIOD*1000;
 }
 async function pollRecent(){try{const r=await fetch('/api/recent?n=75',{cache:'no-store'});const j=await r.json();if(j.coins){winAdd(j.coins);updWin();if(data){renderNarr(data);renderStream()}}}catch(e){}}
 function countdown(){const s=Math.max(0,Math.round((nextAt-Date.now())/1000));$('#next').textContent='next in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');if(s<=0&&nextAt){nextAt=0;scan(false)}}
@@ -465,7 +501,7 @@ $('#wtext').value=wallets();
 $('#wsave').onclick=()=>{try{localStorage.setItem('radar.wallets',$('#wtext').value)}catch{};loadWallets()};
 $('#q').addEventListener('input',applyFilter);
 $('#rescan').onclick=()=>scan(true);
-renderCats();updWin();scan(false);pollRecent();loadWallets();setInterval(countdown,1000);setInterval(pollRecent,RECENT_EVERY*1000);setInterval(loadWallets,PERIOD*1000);
+renderCats();updWin();{const last=ls.get('radar.last',null);if(last&&last.ts&&Date.now()-last.ts<3*3600e3){try{render(last);$('#live').textContent='showing the last scan ('+hhmm(last.ts)+') while a fresh one loads'}catch(e){}}}scan(false);pollRecent();loadWallets();setInterval(countdown,1000);setInterval(pollRecent,RECENT_EVERY*1000);setInterval(loadWallets,PERIOD*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&data&&Date.now()-data.ts>PERIOD*1000)scan(false)});
 </script>
 </body>
