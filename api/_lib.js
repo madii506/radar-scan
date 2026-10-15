@@ -14,10 +14,10 @@ async function fetchText(url, opt = {}, ms = 9000) {
 async function fetchJson(url, opt, ms) { return JSON.parse(await fetchText(url, opt, ms)); }
 
 // wrap a reader so one failure never kills the scan
-async function timed(name, fn) {
+async function timed(name, fn, cap = 8000) {
   const t0 = Date.now();
   try {
-    const data = await fn();
+    const data = await Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error('took longer than ' + cap + 'ms')), cap))]);
     return { name, ok: true, data, n: Array.isArray(data) ? data.length : (data && data.n) || 0, ms: Date.now() - t0 };
   } catch (e) {
     return { name, ok: false, data: null, n: 0, err: String(e && e.message || e).slice(0, 160), ms: Date.now() - t0 };
@@ -141,7 +141,7 @@ async function jupList(path) { const j = await fetchJson('https://lite-api.jup.a
 // CoinGecko trending searches (what the retail crowd is typing in)
 async function coingeckoTrending() {
   const j = await fetchJson('https://api.coingecko.com/api/v3/search/trending', {}, 8000);
-  return (j.coins || []).map((c, i) => { const it = c.item || {}; const d = it.data || {}; return { kind: 'coingecko', rank: i + 1, title: it.name + ' (' + (it.symbol || '') + ')', url: 'https://www.coingecko.com/en/coins/' + it.id, img: it.thumb || it.small || null, mcRank: it.market_cap_rank || null, ch24: d.price_change_percentage_24h && d.price_change_percentage_24h.usd != null ? +Number(d.price_change_percentage_24h.usd).toFixed(1) : null, mc: d.market_cap || null, t: null }; });
+  return (j.coins || []).map((c, i) => { const it = c.item || {}; const d = it.data || {}; return { kind: 'coingecko', rank: i + 1, title: it.name + ' (' + (it.symbol || '') + ')', url: 'https://www.coingecko.com/en/coins/' + it.id, img: it.large || it.small || it.thumb || null, mcRank: it.market_cap_rank || null, ch24: d.price_change_percentage_24h && d.price_change_percentage_24h.usd != null ? +Number(d.price_change_percentage_24h.usd).toFixed(1) : null, mc: d.market_cap || null, t: null }; });
 }
 
 // Google News RSS for one query (fresh stories, no auth). The RSS link is a redirect; the real URL is usually readable inside it.
@@ -280,16 +280,39 @@ async function pagePreview(url) {
     const meta = (p) => { const m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']' + p + '["\'][^>]+content=["\']([^"\']*)["\']', 'i')) || html.match(new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]+(?:property|name)=["\']' + p + '["\']', 'i')); return m ? unesc(m[1]).trim() : ''; };
     const title = meta('og:title') || meta('twitter:title') || unesc((html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '');
     const desc = meta('og:description') || meta('description') || meta('twitter:description');
-    let img = meta('og:image') || meta('twitter:image'); if (img && img.startsWith('/')) { try { img = new URL(img, url).href; } catch { img = ''; } }
+    const abs = (u) => { if (!u) return ''; if (u.startsWith('//')) u = 'https:' + u; if (u.startsWith('/')) { try { u = new URL(u, url).href; } catch { return ''; } } return /^https?:\/\//.test(u) ? u : ''; };
+    // every picture the page itself offers: all og:image tags, twitter:image, json-ld images (news sites often ship 2-4 crops)
+    const imgs = []; const seenI = new Set(); const push = (u) => { u = abs(unesc(u || '').trim()); if (u && !seenI.has(u) && imgs.length < 6) { seenI.add(u); imgs.push(u); } };
+    const mre = /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url|:url)?|twitter:image(?::src)?)["'][^>]+content=["']([^"']*)["']/gi; let mm; while ((mm = mre.exec(html))) push(mm[1]);
+    const mre2 = /<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["'](?:og:image(?::secure_url|:url)?|twitter:image(?::src)?)["']/gi; while ((mm = mre2.exec(html))) push(mm[1]);
+    const ldre = /"(?:image|thumbnailUrl|contentUrl)"\s*:\s*(?:\[\s*)?(?:\{[^}]*?"url"\s*:\s*)?"(https?:[^"]+\.(?:jpe?g|png|webp|gif)[^"]*)"/gi; while ((mm = ldre.exec(html)) && imgs.length < 6) push(mm[1]);
+    const img = imgs[0] || '';
     const site = meta('og:site_name') || new URL(url).hostname.replace(/^www\./, '');
     const at = Date.parse(meta('article:published_time') || '') || null;
     // tweets embedded in the article (news sites embed the source post) — real tweets about the story, no search key needed
     const tweets = []; const seen = new Set(); const re = /(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status(?:es)?\/(\d{15,20})/g; let m;
     while ((m = re.exec(html)) && tweets.length < 4) { if (/^(i|intent|share|search|home|hashtag)$/i.test(m[1]) || seen.has(m[2])) continue; seen.add(m[2]); tweets.push({ id: m[2], handle: m[1] }); }
-    if (title || desc || tweets.length) v = { title: title.slice(0, 160), desc: desc.slice(0, 500), img: img || null, site, at, url, tweets };
+    if (title || desc || tweets.length || imgs.length) v = { title: title.slice(0, 160), desc: desc.slice(0, 500), img: img || null, imgs, site, at, url, tweets };
   } catch (e) { v = null; }
   previewCache.set(url, { at: Date.now(), v });
   return v;
 }
 
-module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, tweetFor, tweetSearchMode, pagePreview, previewCache, redlib, kickClips, kymNews, googleNewsTop };
+// pictures for a topic, for when the source has none worth using: wikipedia page image (big and on-topic for named things,
+// animals, people, companies) + wikimedia commons photos. Real files with a page to credit.
+async function imagesFor(q) {
+  q = String(q || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!q) return [];
+  const short = q.split(' ').length <= 5;
+  const [wp, cm] = await Promise.all([
+    fetchJson('https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(q) + '&gsrlimit=4&prop=pageimages|description&piprop=original|thumbnail&pithumbsize=900&format=json', {}, 6000).catch(() => null),
+    short ? fetchJson('https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(q) + '&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=900&format=json', {}, 6000).catch(() => null) : null,
+  ]);
+  const out = [];
+  const pages = wp && wp.query && wp.query.pages ? Object.values(wp.query.pages).sort((a, b) => (a.index || 0) - (b.index || 0)) : [];
+  for (const p of pages) { const im = p.thumbnail || p.original; if (im && im.source && !/\.svg/i.test(im.source)) out.push({ url: im.source, w: im.width || null, h: im.height || null, src: 'wikipedia', title: p.title, desc: p.description || '', page: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(p.title.replace(/ /g, '_')) }); }
+  const cpages = cm && cm.query && cm.query.pages ? Object.values(cm.query.pages).sort((a, b) => (a.index || 0) - (b.index || 0)) : [];
+  for (const p of cpages) { const ii = (p.imageinfo || [])[0]; if (!ii || !/^image\/(jpeg|png|webp|gif)/.test(ii.mime || '')) continue; if ((ii.width || 0) < 300) continue; out.push({ url: ii.thumburl || ii.url, w: ii.thumbwidth || ii.width || null, h: ii.thumbheight || ii.height || null, src: 'commons', title: (p.title || '').replace(/^File:/, ''), page: 'https://commons.wikimedia.org/wiki/' + encodeURIComponent(p.title) }); }
+  return out.slice(0, 8);
+}
+
+module.exports = { imagesFor, fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, tweetFor, tweetSearchMode, pagePreview, previewCache, redlib, kickClips, kymNews, googleNewsTop };
