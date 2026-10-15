@@ -46,7 +46,7 @@ section{margin-bottom:34px;min-width:0}
 .cat.on{color:var(--fg);border-color:var(--dim);background:var(--bg2)}
 .cat.on.c-ai{border-color:#7c9cff;color:#aebfff}.cat.on.c-animals{border-color:#3ddc84;color:#8ff0b8}.cat.on.c-github{border-color:#c9c9c9;color:#fff}.cat.on.c-tech{border-color:#6fb3ff;color:#a9d3ff}.cat.on.c-whitehouse{border-color:#ff8a5c;color:#ffb899}.cat.on.c-money{border-color:#ffd966;color:#ffe8a3}.cat.on.c-crypto{border-color:var(--amb);color:var(--amb)}.cat.on.c-sports{border-color:#9aa;color:#cdd}.cat.on.c-entertainment{border-color:#e08cff;color:#f0c2ff}.cat.on.c-other{border-color:#777;color:#aaa}
 .cats .sep{width:1px;height:18px;background:var(--line);margin:0 4px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(600px,1fr));gap:0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:0 28px}
 .card.kit .tri{position:absolute;right:0;top:10px;display:flex;gap:4px}
 .card.kit .tri button{background:var(--bg2);border:1px solid var(--line);border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--dim);font:13px/1 var(--mono)}
 .card.kit .tri button:hover{color:var(--fg);border-color:var(--dim)}.card.kit .tri button.on{color:var(--amb);border-color:var(--amb)}
@@ -65,6 +65,21 @@ section{margin-bottom:34px;min-width:0}
 .sortrow{display:flex;gap:6px;align-items:center;margin:0 0 10px;font:11.5px/1 var(--mono);color:var(--dim);flex-wrap:wrap}
 .sortrow .cat{padding:4px 9px}
 #short .card.kit{border-left:2px solid var(--amb);padding-left:10px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(640px,1fr));gap:0 28px}
+@media(max-width:700px){.pgrid{grid-template-columns:minmax(0,1fr)}}
+.card.pick{grid-template-columns:150px minmax(0,1fr);padding:14px 0 16px}
+.card.pick .big{width:150px;height:150px;border-radius:12px}
+.card.pick .noimg{width:150px;height:150px}
+.card.pick .t{font-size:17px;line-height:1.25;padding-right:64px;margin-top:2px}
+.card.pick .t a{color:var(--fg)}
+.card.pick .why{font:12.5px/1.5 var(--mono);color:var(--amb);margin-top:4px}
+.card.row{grid-template-columns:44px minmax(0,1fr);padding:8px 0}
+.card.row .im,.card.row .ph{width:44px;height:44px;border-radius:7px}
+.card.row .t{font-size:13.5px;padding-right:64px}
+.card.row .tri{top:8px}.card.row .tri button{width:24px;height:24px}
+.card.row .m a{color:var(--dim)}
+.card.row .kitb{background:none;border:0;padding:0;color:var(--blu);cursor:pointer;font:11.5px/1 var(--mono)}
+@media(max-width:700px){.card.pick{grid-template-columns:96px minmax(0,1fr)}.card.pick .big,.card.pick .noimg{width:96px;height:96px}}
 @media(max-width:480px){.grid{grid-template-columns:minmax(0,1fr)}}
 .card.kit{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .kit .big{width:96px;height:96px;border-radius:10px;object-fit:cover;background:var(--bg2);border:1px solid var(--line);display:block}
@@ -127,10 +142,13 @@ textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-ra
 </div></header>
 
 <div class="wrap"><main>
-  <section id="s-could"><div class="eyebrow"><b>01</b> could launch <span id="could-n"></span><em class="why">Everything trending off-chain with real interactions — searches, posts, points, volume — ranked by heat, tagged by category, checked against every pump.fun coin created in the window, each with the real tweet behind it (the deployers' own tweet when it is already launched, otherwise the most-liked tweet on x about it). <i style="color:var(--grn)">open</i> = nobody has made it yet. ★ shortlists, ✕ hides.</em></div>
+  <section id="s-picks"><div class="eyebrow"><b>00</b> launch now <span id="picks-n"></span><em class="why">The best open narratives this minute, ranked for a memecoin: in your lanes, fresh, with real interactions, a picture, the story and the tweet behind it. Nothing here has a coin on pump.fun yet. ★ keeps it, ✕ throws it out.</em></div>
     <div class="cats" id="cats"></div>
+    <div id="short-wrap" style="display:none"><div class="count">★ your shortlist</div><div class="pgrid" id="short"></div></div>
+    <div class="pgrid" id="picks"></div>
+  </section>
+  <section id="s-could"><div class="eyebrow"><b>01</b> everything trending <span id="could-n"></span><em class="why">The full list behind the picks — every trend, post, repo, market and story, with how many pump.fun coins already ride it. Click <i>kit ▸</i> on a row to open its launch kit.</em></div>
     <div class="sortrow" id="sortrow"></div>
-    <div id="short-wrap" style="display:none"><div class="count">★ shortlist — the ones you starred</div><div class="grid" id="short"></div></div>
     <div class="count" id="could-count"></div>
     <div class="grid" id="could"></div>
     <button class="btn" id="could-more" style="margin-top:10px;display:none">show more</button>
@@ -180,7 +198,7 @@ AqT21DFMA9MJW8tKXQdnBDZZ7cm3NXq9gPWs6g2z78R5 collector (no launches)`;
 const PERIOD=300, RECENT_EVERY=30, WIN_HOURS=3, WIN_MAX=2500;
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 let seen=ls.get('radar.seen',{}), catsOn=new Set(ls.get('radar.cats',DEFAULT_ON)), showTaken=ls.get('radar.taken',false), minHeat=ls.get('radar.heat',0), couldLimit=40;
-let hidden=ls.get('radar.hide',{}), starred=ls.get('radar.star',{}), sortBy=ls.get('radar.sort','heat'), showHidden=false, onlyTweet=ls.get('radar.onlytweet',false);
+let hidden=ls.get('radar.hide',{}), starred=ls.get('radar.star',{}), sortBy=ls.get('radar.sort','pick'), showHidden=false, onlyTweet=ls.get('radar.onlytweet',false);
 const keyOf=o=>o.kind+':'+o.title;
 let data=null,nextAt=0;
 // the client-side window of pump.fun creates: grows every 30s, kept for 3h
@@ -262,23 +280,44 @@ async function xfind(q,key){
   const o=((data&&data.could)||[]).find(x=>keyOf(x)===key);if(!o)return;$('#live').textContent='searching x for '+q;
   try{const r=await fetch('/api/xfind?q='+encodeURIComponent(q),{cache:'no-store'});const j=await r.json();if(j.tweets&&j.tweets[0]){o.tweet=j.tweets[0];o.tweetSrc='search';renderCould()}else{$('#live').textContent='nothing on x for '+q}}catch(e){}
 }
-function cardFor(o){
+let expanded=new Set();
+function whyLine(o){const parts=[];
+  if(o.kind==='gtrend')parts.push(`<b>${esc(o.traffic)}</b> searches in ${o.geo}`);
+  else if(o.kind==='xtrend')parts.push(`x trending <b>#${o.rank}</b>`);
+  else if(o.kind==='hn')parts.push(`<b>${o.score}</b> pts · ${o.comments} comments on hn`);
+  else if(o.kind==='github')parts.push(`<b>${esc(o.stars||'trending')}</b> on github`);
+  else if(o.kind==='producthunt')parts.push('new on product hunt');
+  else if(o.kind==='market')parts.push(`<b>${fmt$(o.v24)}</b> bet today · ${o.yes!=null?o.yes+'% yes':''}`);
+  else if(o.kind==='news')parts.push(`<b>${esc(o.src||'news')}</b>`);
+  if(o.t)parts.push(ago(o.t)+' ago');
+  if(o.tweet&&!o.tweet.err)parts.push(`tweet with <b>${fmtN(o.tweet.likes||0)}</b> likes`);
+  return parts.join(' · ');}
+function cardFor(o,full){
   const id='k:'+o.kind+':'+o.title;const open=o.launched===0;const n=(o.news||[])[0]||{};const k=kitFor(o);const q=o.title.replace(/^[^/]+\//,'');const key=keyOf(o);
-  return `<div class="card kit" data-key="${esc(key)}" data-f="${esc((o.title+' '+(o.desc||'')+' '+(o.news||[]).map(x=>x.title).join(' ')+' '+o.cats.join(' ')+' '+(k.tw?k.tw.text+' @'+k.tw.handle:'')).toLowerCase())}">
-    ${k.img?`<a href="${esc(k.img)}" target="_blank" rel="noopener" title="open image"><img class="big" src="${esc(k.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'no picture — take one from the tweet or the source'}))"></a>`:`<div class="noimg">no picture —<br>take one from the source</div>`}
-    <div>
-    <div class="tri"><button title="shortlist" class="${starred[key]?'on':''}" onclick='toggleStar(${JSON.stringify(key)})'>★</button><button title="hide" onclick='toggleHide(${JSON.stringify(key)})'>${hidden[key]?'↩':'✕'}</button></div>
-    <div class="t">${isNew(id)?'<span class="tag new">NEW</span>':''}<span class="tag heat ${o.heat>=10?'hot':''}">${o.heat}</span><span class="tag ${open?'open':'taken'}">${open?'open':o.launched+' coins'}</span>${catTags(o.cats)}<span class="tag" style="text-transform:none">${KIND[o.kind]||o.kind}</span><a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(o.title)}</a></div>
-    <div class="m">${metaFor(o)}${o.coins&&o.coins.length?` · on pump: ${o.coins.slice(0,3).map(coinLine).join(', ')}`:''}</div>
-    ${o.news&&o.news.length>1?`<div class="m">${o.news.slice(1,3).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.src||'news')}: ${esc(x.title.slice(0,80))}</a>`).join('<br>')}</div>`:''}
+  const f=esc((o.title+' '+(o.desc||'')+' '+(o.news||[]).map(x=>x.title).join(' ')+' '+o.cats.join(' ')+' '+(k.tw?k.tw.text+' @'+k.tw.handle:'')).toLowerCase());
+  const tri=`<div class="tri"><button title="shortlist" class="${starred[key]?'on':''}" onclick='toggleStar(${JSON.stringify(key)})'>★</button><button title="hide" onclick='toggleHide(${JSON.stringify(key)})'>${hidden[key]?'↩':'✕'}</button></div>`;
+  const tags=`${isNew(id)?'<span class="tag new">NEW</span>':''}<span class="tag ${open?'open':'taken'}">${open?'open':o.launched+' coins'}</span>${catTags(o.cats)}<span class="tag" style="text-transform:none">${KIND[o.kind]||o.kind}</span><span class="tag heat ${o.heat>=10?'hot':''}">heat ${o.heat}</span>`;
+  const kitHtml=`${o.news&&o.news.length>1?`<div class="m">${o.news.slice(1,3).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.src||'news')}: ${esc(x.title.slice(0,80))}</a>`).join('<br>')}</div>`:''}
     ${xBox(o,k)}
-    <div class="nm">name <b>${esc(k.name)}</b> · ticker <b>$${esc(k.ticker)}</b> · twitter <a href="${esc(k.tw?k.tw.url:'https://x.com/search?q='+encodeURIComponent(q)+'&f=live')}" target="_blank" rel="noopener">${k.tw?'the tweet above':'none yet'}</a> · website <a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(k.src.replace(/^https?:\/\/(www\.)?/,'').slice(0,44))}</a></div>
+    <div class="nm">name <b>${esc(k.name)}</b> · ticker <b>$${esc(k.ticker)}</b> · twitter <a href="${esc(k.tw?k.tw.url:'https://x.com/search?q='+encodeURIComponent(q)+'&f=live')}" target="_blank" rel="noopener">${k.tw?'the tweet above':'none yet'}</a> · website <a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(k.src.replace(/^https?:\/\/(www\.)?/,'').slice(0,44))}</a>${o.coins&&o.coins.length?` · on pump: ${o.coins.slice(0,3).map(coinLine).join(', ')}`:''}</div>
     <div class="tt">${esc(k.tweet)}<button class="cp" onclick='copyBrief(${JSON.stringify(k.tweet)})'>copy launch tweet</button></div>
-    <div class="lk"><a href="${esc(k.src)}" target="_blank" rel="noopener">open source ↗</a><a href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">x live ↗</a><a href="https://x.com/search?q=${encodeURIComponent(q)}&f=media" target="_blank" rel="noopener">x images ↗</a><a href="${dexq(q)}" target="_blank" rel="noopener">dex ↗</a>${o.hn?`<a href="${esc(o.hn)}" target="_blank" rel="noopener">hn ↗</a>`:''}<a href="https://pump.fun/create" target="_blank" rel="noopener">pump.fun/create ↗</a><button onclick='copyBrief(${JSON.stringify('name: '+k.name+'\nticker: '+k.ticker+'\nimage: '+k.img+'\ntwitter: '+(k.tw?k.tw.url:'')+'\nwebsite: '+k.src+'\n\nlaunch tweet:\n'+k.tweet+(k.tw?'\n\nsource tweet (@'+k.tw.handle+'):\n'+k.tw.text:''))})'>copy all</button></div></div></div>`;
+    <div class="lk"><a href="${esc(k.src)}" target="_blank" rel="noopener">open source ↗</a><a href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">x live ↗</a><a href="https://x.com/search?q=${encodeURIComponent(q)}&f=media" target="_blank" rel="noopener">x images ↗</a><a href="${dexq(q)}" target="_blank" rel="noopener">dex ↗</a>${o.hn?`<a href="${esc(o.hn)}" target="_blank" rel="noopener">hn ↗</a>`:''}<a href="https://pump.fun/create" target="_blank" rel="noopener">pump.fun/create ↗</a><button onclick='copyBrief(${JSON.stringify('name: '+k.name+'\nticker: '+k.ticker+'\nimage: '+k.img+'\ntwitter: '+(k.tw?k.tw.url:'')+'\nwebsite: '+k.src+'\n\nlaunch tweet:\n'+k.tweet+(k.tw?'\n\nsource tweet (@'+k.tw.handle+'):\n'+k.tw.text:''))})'>copy all</button></div>`;
+  if(full){
+    return `<div class="card kit pick" data-key="${esc(key)}" data-f="${f}">
+      ${k.img?`<a href="${esc(k.img)}" target="_blank" rel="noopener" title="open image"><img class="big" src="${esc(k.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'no picture — take one from the tweet or the source'}))"></a>`:`<div class="noimg">no picture —<br>take one from the source</div>`}
+      <div>${tri}<div style="margin-bottom:4px">${tags}</div><div class="t"><a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(o.title)}</a></div><div class="why">${whyLine(o)}</div>${kitHtml}</div></div>`;
+  }
+  const ex=expanded.has(key);
+  return `<div class="card kit row" data-key="${esc(key)}" data-f="${f}">
+    ${k.img?`<img class="im" src="${esc(k.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph',textContent:${JSON.stringify((o.title||'?').slice(0,1).toUpperCase())}}))">`:`<div class="ph">${esc((o.title||'?').slice(0,1).toUpperCase())}</div>`}
+    <div>${tri}<div class="t">${tags}<a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(o.title)}</a></div>
+    <div class="m">${whyLine(o)} · <button class="kitb" onclick='toggleKit(${JSON.stringify(key)})'>${ex?'kit ▾':'kit ▸'}</button> · <a href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">x live ↗</a> · <a href="${dexq(q)}" target="_blank" rel="noopener">dex ↗</a>${o.coins&&o.coins.length?` · on pump: ${o.coins.slice(0,2).map(coinLine).join(', ')}`:''}</div>
+    ${ex?kitHtml:''}</div></div>`;
 }
+function toggleKit(key){expanded.has(key)?expanded.delete(key):expanded.add(key);renderCould()}
 function toggleStar(key){starred[key]?delete starred[key]:(starred[key]=Date.now());ls.set('radar.star',starred);renderCould()}
 function toggleHide(key){hidden[key]?delete hidden[key]:(hidden[key]=Date.now());ls.set('radar.hide',hidden);renderCould()}
-function renderSort(){$('#sortrow').innerHTML=`sort <button class="cat ${sortBy==='heat'?'on':''}" data-s="heat">heat</button><button class="cat ${sortBy==='new'?'on':''}" data-s="new">newest</button><button class="cat ${sortBy==='likes'?'on':''}" data-s="likes">tweet likes</button><span class="sep"></span><button class="cat ${onlyTweet?'on':''}" data-ot="1">only with a tweet</button><span class="sep"></span><button class="cat ${showHidden?'on':''}" data-sh="1">show hidden (${Object.keys(hidden).length})</button>${Object.keys(hidden).length?`<button class="cat" data-clear="1">clear hidden</button>`:''}`;
+function renderSort(){$('#sortrow').innerHTML=`sort <button class="cat ${sortBy==='pick'?'on':''}" data-s="pick">launchability</button><button class="cat ${sortBy==='heat'?'on':''}" data-s="heat">heat</button><button class="cat ${sortBy==='new'?'on':''}" data-s="new">newest</button><button class="cat ${sortBy==='likes'?'on':''}" data-s="likes">tweet likes</button><span class="sep"></span><button class="cat ${onlyTweet?'on':''}" data-ot="1">only with a tweet</button><span class="sep"></span><button class="cat ${showHidden?'on':''}" data-sh="1">show hidden (${Object.keys(hidden).length})</button>${Object.keys(hidden).length?`<button class="cat" data-clear="1">clear hidden</button>`:''}`;
   $('#sortrow').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sortBy=b.dataset.s;ls.set('radar.sort',sortBy);renderCould()});
   $('#sortrow').querySelector('[data-ot]').onclick=()=>{onlyTweet=!onlyTweet;ls.set('radar.onlytweet',onlyTweet);renderCould()};
   $('#sortrow').querySelector('[data-sh]').onclick=()=>{showHidden=!showHidden;renderCould()};
@@ -286,19 +325,24 @@ function renderSort(){$('#sortrow').innerHTML=`sort <button class="cat ${sortBy=
 }
 function renderCould(){
   const el=$('#could');const all=(data&&data.could)||[];renderSort();
-  const wa=winArr();const useWin=wa.length>((data&&data.coins)||[]).length;
-  const rows=all.map(o=>{if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);return {...o,launched:m.n,coins:m.coins}}return o});
+  const wa=winArr();const useWin=wa.length>((data&&data.coins)||[]).length;const now=Date.now();
+  const rows=all.map(o=>{let r=o;if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);r={...o,launched:m.n,coins:m.coins}}r.pick=NARR.pickScore(r,now);return r});
   const open=rows.filter(o=>o.launched===0).length;
-  let vis=rows.filter(o=>o.cats.some(c=>catsOn.has(c))&&o.heat>=minHeat&&(showTaken||o.launched===0)&&(showHidden?true:!hidden[keyOf(o)])&&(!onlyTweet||(o.tweet&&!o.tweet.err)));
-  if(sortBy==='new')vis.sort((a,b)=>(b.t||0)-(a.t||0));else if(sortBy==='likes')vis.sort((a,b)=>((b.tweet&&b.tweet.likes)||0)-((a.tweet&&a.tweet.likes)||0));
+  // 00 picks: in your lanes, not hidden, launchable
+  const picks=rows.filter(o=>o.pick>0&&o.cats.some(c=>catsOn.has(c))&&!hidden[keyOf(o)]&&!starred[keyOf(o)]).sort((a,b)=>b.pick-a.pick).slice(0,8);
+  $('#picks').innerHTML=picks.length?picks.map(o=>cardFor(o,true)).join(''):'<div class="empty">Nothing launchable in your lanes right now — turn more categories on, or look at the full list below.</div>';
+  $('#picks-n').textContent=picks.length?`${picks.length} picks · ${open} open things in total`:'';
   const stars=rows.filter(o=>starred[keyOf(o)]);
-  $('#short-wrap').style.display=stars.length?'':'none';$('#short').innerHTML=stars.map(cardFor).join('');
+  $('#short-wrap').style.display=stars.length?'':'none';$('#short').innerHTML=stars.map(o=>cardFor(o,true)).join('');
+  // 01 the list
+  let vis=rows.filter(o=>o.cats.some(c=>catsOn.has(c))&&o.heat>=minHeat&&(showTaken||o.launched===0)&&(showHidden?true:!hidden[keyOf(o)])&&(!onlyTweet||(o.tweet&&!o.tweet.err)));
+  if(sortBy==='new')vis.sort((a,b)=>(b.t||0)-(a.t||0));else if(sortBy==='likes')vis.sort((a,b)=>((b.tweet&&b.tweet.likes)||0)-((a.tweet&&a.tweet.likes)||0));else if(sortBy==='pick')vis.sort((a,b)=>b.pick-a.pick);
   const withTweet=rows.filter(o=>o.tweet&&!o.tweet.err).length;
   $('#could-n').textContent=all.length?`${all.length} things · ${open} open · ${withTweet} with a real tweet`:'';
   $('#could-count').textContent=all.length?`showing ${Math.min(vis.length,couldLimit)} of ${vis.length} that match your filters · ${rows.length-open} already launched · ${Object.keys(hidden).length} hidden${useWin?' · checked against your '+wa.length+'-coin window':''}`:'';
   if(!all.length){el.innerHTML='<div class="empty">Nothing yet — the first scan is running.</div>';return}
   if(!vis.length){el.innerHTML='<div class="empty">Nothing matches these filters. Turn a category on, lower the heat floor, show launched, or show hidden.</div>';$('#could-more').style.display='none';return}
-  el.innerHTML=vis.slice(0,couldLimit).map(cardFor).join('');
+  el.innerHTML=vis.slice(0,couldLimit).map(o=>cardFor(o,false)).join('');
   $('#could-more').style.display=vis.length>couldLimit?'':'none';
 }
 $('#could-more').onclick=()=>{couldLimit+=40;renderCould()};

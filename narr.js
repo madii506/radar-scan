@@ -63,7 +63,7 @@
     whitehouse: /\b(white house|whitehouse|trump|president|potus|senate|congress|house of representatives|election|elections|governor|biden|vance|kamala|harris|minister|parliament|kremlin|putin|zelensky|zelenskyy|israel|gaza|iran|tariff|tariffs|executive order|pentagon|fbi|cia|supreme court|democrat|democrats|republican|republicans|gop|maga|doge|epstein|shutdown|impeach|impeachment|border|ice|deportation|nato|un|united nations|ceasefire|sanctions|secretary|cabinet|rubio|hegseth|bondi|musk|newsom|aoc|obama|clinton|pelosi|schumer|jeffries|johnson|netanyahu|xi|jinping|modi|starmer|macron|merz|carney|milei|king charles|royal|prince|princess|kate|meghan|coup|protest|protests|riot|strike)\b/i,
     money: /\b(stock|stocks|shares|market|markets|nasdaq|dow|s&p|sp500|fed|rates|rate cut|inflation|cpi|earnings|ipo|billion|billions|million|millions|trillion|bank|banks|jpmorgan|goldman|layoffs|salary|tax|taxes|price|prices|gold|silver|oil|wall street|wallstreetbets|wsb|investor|investors|hedge fund|buyback|dividend|recession|gdp|treasury|bond|bonds|mortgage|housing|rent|debt|bankrupt|bankruptcy|fraud|ponzi|lottery|jackpot|powerball|mega millions|net worth|billionaire|millionaire|rich|money|cash|dollar|dollars|euro|yen|yuan|forex|tesla|tsla|nvda|aapl|amzn|msft|googl|meta|amd|intel|palantir|pltr|coreweave|robinhood|hood|backpack|xstocks)\b/i,
     tech: /\b(apple|iphone|ipad|mac|macbook|ios|android|google|pixel|microsoft|windows|xbox|tesla|spacex|starship|starlink|rocket|launch|app|apps|startup|software|hardware|chip|chips|semiconductor|quantum|browser|chrome|safari|firefox|vr|ar|headset|meta|instagram|tiktok|youtube|twitter|x\.com|reddit|discord|telegram|whatsapp|snapchat|netflix|spotify|amazon|aws|cloud|server|servers|api|update|beta|bug|hack|hacked|hacker|breach|leak|leaked|cyber|cybersecurity|password|privacy|drone|drones|ev|evs|battery|solar|nuclear|fusion|5g|6g|wifi|satellite|telescope|nasa|mars|moon|asteroid|comet|eclipse|science|physics|biotech|crispr|vaccine|fda)\b/i,
-    sports: /\b(nfl|nba|mlb|nhl|wnba|ncaa|football|soccer|basketball|baseball|hockey|tennis|golf|f1|formula 1|nascar|ufc|mma|boxing|wrestling|wwe|aew|olympics|world cup|champions league|premier league|la liga|serie a|bundesliga|ligue 1|mls|match|game|games|league|cup|playoffs|finals|coach|quarterback|touchdown|goal|goals|striker|midfielder|transfer|injury|lineup|roster|draft|trade|mvp|rookie|lacrosse|cricket|rugby|marathon|cycling|skiing|lakers|yankees|dodgers|cowboys|chiefs|eagles|celtics|warriors|knicks|heat|bulls|thunder|spurs|liverpool|arsenal|chelsea|barcelona|real madrid|psg|milan|juventus|bayern|dortmund|united|city|sunderland|salzburg|palace|torreense|messi|ronaldo|lebron|curry|mahomes|ohtani|judge|wembanyama|holmgren|collier|win on|o\/u|spread|fc|cf|sc|afc|leverkusen|inter|atletico|sevilla|napoli|roma|benfica|porto|ajax|celtic|rangers|galatasaray|fenerbahce|boca|river|flamengo)\b/i,
+    sports: /\b(nfl|nba|mlb|nhl|wnba|ncaa|football|soccer|basketball|baseball|hockey|tennis|golf|f1|formula 1|nascar|ufc|mma|boxing|wrestling|wwe|aew|olympics|world cup|champions league|premier league|la liga|serie a|bundesliga|ligue 1|mls|match|game|games|league|cup|playoffs|finals|coach|quarterback|touchdown|goal|goals|striker|midfielder|transfer|injury|lineup|roster|draft|trade|mvp|rookie|lacrosse|cricket|rugby|marathon|cycling|skiing|lakers|yankees|dodgers|cowboys|chiefs|eagles|celtics|warriors|knicks|heat|bulls|thunder|spurs|liverpool|arsenal|chelsea|barcelona|real madrid|psg|milan|juventus|bayern|dortmund|united|city|sunderland|salzburg|palace|torreense|messi|ronaldo|lebron|curry|mahomes|ohtani|judge|wembanyama|holmgren|collier|win on|o\/u|spread|fc|cf|sc|afc|leverkusen|inter|atletico|sevilla|napoli|roma|benfica|porto|ajax|celtic|rangers|galatasaray|fenerbahce|boca|river|flamengo|bo3|bo5|esports|counter-strike|cs2|dota|valorant|league of legends|lol worlds|thunderpick|parivision|betboom|furia|navi|vitality|faze|g2|t1|gen\.g|map \d|game \d|set \d|round \d|qualifier|standings|fixture|fixtures|kickoff|halftime|overtime)\b/i,
     entertainment: /\b(movie|movies|film|films|netflix|hbo|disney|marvel|dc|star wars|trailer|album|song|songs|singer|rapper|rap|concert|tour|grammy|grammys|oscar|oscars|emmy|emmys|actor|actress|celebrity|kardashian|jenner|swift|taylor swift|beyonce|drake|kanye|ye|bieber|rihanna|bad bunny|tv|series|season|episode|anime|manga|pokemon|pokémon|nintendo|playstation|ps5|xbox|game|gaming|gamer|fortnite|minecraft|roblox|gta|twitch|streamer|streamers|kai cenat|mrbeast|ishowspeed|xqc|podcast|rogan|comedian|comedy|snl|late night|bratz|barbie|lego|toy|toys|doll|dolls|wedding|divorce|dating|pregnant|baby|died|dies|death|rip|funeral|tragedy|arrested|arrest|lawsuit|sued|scandal|cheating|affair|viral|meme|memes|tiktoker|influencer|onlyfans)\b/i,
   };
   const CAT_ORDER = ['animals', 'ai', 'crypto', 'github', 'whitehouse', 'money', 'tech', 'sports', 'entertainment'];
@@ -72,6 +72,7 @@
     for (const c of CAT_ORDER) if (CATS[c].test(t)) out.push(c);
     // "club - club" / "a vs b" titles are matches, whatever the headlines mention
     if (/\s(-|–|vs\.?|v)\s/.test(t) && (out.includes('sports') || !out.length) && kind === 'gtrend') out = ['sports'];
+    if (/\b(vs\.?|bo[1357]|thunderpick|esports)\b/i.test(t) && out.includes('sports')) out = ['sports'];
     if (!out.length && extra) { const e = ' ' + String(extra).toLowerCase() + ' '; for (const c of CAT_ORDER) if (CATS[c].test(e)) out.push(c); }
     if (kind === 'github' && !out.includes('github')) out.unshift('github');
     if (kind === 'producthunt' && !out.includes('tech') && !out.includes('ai')) out.push('tech');
@@ -100,5 +101,21 @@
     return +(h * rec).toFixed(1);
   }
 
-  return { STOP, CHRONIC, norm, words, tweetId, keysFor, buildClusters, matchTrend, CATS, CAT_ORDER, categorize, heatOf };
+  // launchability: what belongs in TOP PICKS. Open, memeable lanes, fresh, with something to show (picture / story / tweet).
+  const LANE = { animals: 1.7, ai: 1.4, whitehouse: 1.3, crypto: 1.15, money: 1.0, tech: 1.0, github: 0.9, entertainment: 0.6, sports: 0.15, other: 0.35 };
+  function pickScore(o, now) {
+    if (o.launched > 0) return 0;
+    if (o.kind === 'coingecko') return 0;
+    const cats = o.cats || ['other']; const lane = Math.max.apply(null, cats.map(c => LANE[c] == null ? 0.35 : LANE[c]));
+    if (cats.includes('sports') && !cats.some(c => c === 'animals' || c === 'ai' || c === 'whitehouse')) return 0;
+    const age = o.t ? (now - o.t) / 3600000 : (o.kind === 'xtrend' ? 0.5 : 6);
+    const fresh = age < 1 ? 1.5 : age < 3 ? 1.25 : age < 8 ? 1 : age < 24 ? 0.6 : 0.3;
+    const img = o.img || (o.news && o.news[0] && o.news[0].img) || (o.preview && o.preview.img) || (o.tweet && o.tweet.imgs && o.tweet.imgs[0]);
+    const story = o.preview && (o.preview.desc || o.preview.title); const tw = o.tweet && !o.tweet.err;
+    let base = o.heat || 1;
+    if (o.kind === 'market') base *= 0.45; // a bet is rarely a meme
+    if (o.kind === 'producthunt') base *= 0.8;
+    return +(base * lane * fresh * (img ? 1.3 : 0.75) * (tw ? 1.35 : 1) * (story ? 1.1 : 1)).toFixed(1);
+  }
+  return { STOP, CHRONIC, norm, words, tweetId, keysFor, buildClusters, matchTrend, CATS, CAT_ORDER, categorize, heatOf, pickScore, LANE };
 });
