@@ -66,7 +66,9 @@
     sports: /\b(nfl|nba|mlb|nhl|wnba|ncaa|football|soccer|basketball|baseball|hockey|tennis|golf|f1|formula 1|nascar|ufc|mma|boxing|wrestling|wwe|aew|olympics|world cup|champions league|premier league|la liga|serie a|bundesliga|ligue 1|mls|match|game|games|league|cup|playoffs|finals|coach|quarterback|touchdown|goal|goals|striker|midfielder|transfer|injury|lineup|roster|draft|trade|mvp|rookie|lacrosse|cricket|rugby|marathon|cycling|skiing|lakers|yankees|dodgers|cowboys|chiefs|eagles|celtics|warriors|knicks|heat|bulls|thunder|spurs|liverpool|arsenal|chelsea|barcelona|real madrid|psg|milan|juventus|bayern|dortmund|united|city|sunderland|salzburg|palace|torreense|messi|ronaldo|lebron|curry|mahomes|ohtani|judge|wembanyama|holmgren|collier|win on|o\/u|spread|fc|cf|sc|afc|leverkusen|inter|atletico|sevilla|napoli|roma|benfica|porto|ajax|celtic|rangers|galatasaray|fenerbahce|boca|river|flamengo|bo3|bo5|esports|counter-strike|cs2|dota|valorant|league of legends|lol worlds|thunderpick|parivision|betboom|furia|navi|vitality|faze|g2|t1|gen\.g|map \d|game \d|set \d|round \d|qualifier|standings|fixture|fixtures|kickoff|halftime|overtime)\b/i,
     entertainment: /\b(movie|movies|film|films|netflix|hbo|disney|marvel|dc|star wars|trailer|album|song|songs|singer|rapper|rap|concert|tour|grammy|grammys|oscar|oscars|emmy|emmys|actor|actress|celebrity|kardashian|jenner|swift|taylor swift|beyonce|drake|kanye|ye|bieber|rihanna|bad bunny|tv|series|season|episode|anime|manga|pokemon|pokémon|nintendo|playstation|ps5|xbox|game|gaming|gamer|fortnite|minecraft|roblox|gta|twitch|streamer|streamers|kai cenat|mrbeast|ishowspeed|xqc|podcast|rogan|comedian|comedy|snl|late night|bratz|barbie|lego|toy|toys|doll|dolls|wedding|divorce|dating|pregnant|baby|died|dies|death|rip|funeral|tragedy|arrested|arrest|lawsuit|sued|scandal|cheating|affair|viral|meme|memes|tiktoker|influencer|onlyfans)\b/i,
   };
-  const CAT_ORDER = ['animals', 'ai', 'crypto', 'github', 'whitehouse', 'money', 'tech', 'sports', 'entertainment'];
+  CATS.memes = /\b(meme|memes|viral|brainrot|copypasta|shitpost|trend|trending|challenge|filter|remix|edit|edits|lore|npc|sigma|rizz|skibidi|ohio|gyat|aura|mewing|looksmax|chud|wojak|doomer|bloomer|based|cringe|ratio|cope|seethe|goon|gooning|slop|ai slop|fanum|delulu|girl dinner|mogging|glazing)\b/i;
+  CATS.streamers = /\b(streamer|streamers|stream|streaming|twitch|kick|clip|clips|live|irl|kai cenat|xqc|ishowspeed|adin ross|jynxzi|agent00|duke dennis|fanum|sketch|jasontheween|plaqueboymax|n3on|asmongold|ludwig|mrbeast|hasan|destiny|amouranth|pokimane|valkyrae|tyler1|nmplol|ninja|shroud|tfue|clix|caseoh|lacy)\b/i;
+  const CAT_ORDER = ['animals', 'ai', 'crypto', 'github', 'whitehouse', 'money', 'tech', 'memes', 'streamers', 'sports', 'entertainment'];
   function categorize(text, kind, extra) {
     const t = ' ' + String(text || '').toLowerCase() + ' '; let out = [];
     for (const c of CAT_ORDER) if (CATS[c].test(t)) out.push(c);
@@ -76,6 +78,10 @@
     if (!out.length && extra) { const e = ' ' + String(extra).toLowerCase() + ' '; for (const c of CAT_ORDER) if (CATS[c].test(e)) out.push(c); }
     if (kind === 'github' && !out.includes('github')) out.unshift('github');
     if (kind === 'producthunt' && !out.includes('tech') && !out.includes('ai')) out.push('tech');
+    if (kind === 'kym' && !out.includes('memes')) out.unshift('memes');
+    if (kind === 'kick' && !out.includes('streamers')) out.unshift('streamers');
+    if (kind === 'reddit-animals' && !out.includes('animals')) out.unshift('animals');
+    if (kind === 'reddit-internet' && !out.length) out.push('memes');
     if ((kind === 'dex' || kind === 'gecko' || kind === 'jup' || kind === 'coingecko') && !out.includes('crypto')) out.unshift('crypto');
     if (kind === 'market' && !out.length) out.push('money');
     if (!out.length) out.push('other');
@@ -93,7 +99,10 @@
       case 'producthunt': h = 3; break;
       case 'market': h = (o.v24 || 0) / 60000; break;
       case 'coingecko': h = Math.max(1, 7 - (o.rank || 7) * 0.5); break;   // existing tokens, rarely a launch
-      case 'news': h = 2; break;
+      case 'news': h = o.top ? 4 : 2; break;
+      case 'kym': h = 7; break;                                   // an editor already called it a meme
+      case 'kick': h = (o.views || 0) / 2500; break;              // 25K views → 10
+      case 'reddit-animals': case 'reddit-internet': h = (o.score || 0) / 120 + (o.comments || 0) / 30; break;
       default: h = 1;
     }
     const age = o.t ? (Date.now() - o.t) / 3600000 : 6;
@@ -102,7 +111,7 @@
   }
 
   // launchability: what belongs in TOP PICKS. Open, memeable lanes, fresh, with something to show (picture / story / tweet).
-  const LANE = { animals: 1.7, ai: 1.4, whitehouse: 1.3, crypto: 1.15, money: 1.0, tech: 1.0, github: 0.9, entertainment: 0.6, sports: 0.15, other: 0.35 };
+  const LANE = { animals: 1.7, memes: 1.6, ai: 1.4, whitehouse: 1.3, streamers: 1.15, crypto: 1.15, money: 1.0, tech: 1.0, github: 0.9, entertainment: 0.6, sports: 0.15, other: 0.35 };
   function pickScore(o, now) {
     if (o.launched > 0) return 0;
     if (o.kind === 'coingecko') return 0;
@@ -115,6 +124,7 @@
     let base = o.heat || 1;
     if (o.kind === 'market') base *= 0.45; // a bet is rarely a meme
     if (o.kind === 'producthunt') base *= 0.8;
+    if (o.kind === 'hn' && !cats.some(c => c === 'ai' || c === 'animals' || c === 'memes')) base *= 0.5; // tech essays are not memes
     return +(base * lane * fresh * (img ? 1.3 : 0.75) * (tw ? 1.35 : 1) * (story ? 1.1 : 1)).toFixed(1);
   }
   return { STOP, CHRONIC, norm, words, tweetId, keysFor, buildClusters, matchTrend, CATS, CAT_ORDER, categorize, heatOf, pickScore, LANE };

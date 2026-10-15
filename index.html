@@ -44,7 +44,7 @@ section{margin-bottom:34px;min-width:0}
 .cats{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
 .cat{border:1px solid var(--line);border-radius:999px;padding:5px 10px;font:11.5px/1 var(--mono);cursor:pointer;background:transparent;color:var(--dim)}
 .cat.on{color:var(--fg);border-color:var(--dim);background:var(--bg2)}
-.cat.on.c-ai{border-color:#7c9cff;color:#aebfff}.cat.on.c-animals{border-color:#3ddc84;color:#8ff0b8}.cat.on.c-github{border-color:#c9c9c9;color:#fff}.cat.on.c-tech{border-color:#6fb3ff;color:#a9d3ff}.cat.on.c-whitehouse{border-color:#ff8a5c;color:#ffb899}.cat.on.c-money{border-color:#ffd966;color:#ffe8a3}.cat.on.c-crypto{border-color:var(--amb);color:var(--amb)}.cat.on.c-sports{border-color:#9aa;color:#cdd}.cat.on.c-entertainment{border-color:#e08cff;color:#f0c2ff}.cat.on.c-other{border-color:#777;color:#aaa}
+.cat.on.c-ai{border-color:#7c9cff;color:#aebfff}.cat.on.c-animals{border-color:#3ddc84;color:#8ff0b8}.cat.on.c-github{border-color:#c9c9c9;color:#fff}.cat.on.c-tech{border-color:#6fb3ff;color:#a9d3ff}.cat.on.c-whitehouse{border-color:#ff8a5c;color:#ffb899}.cat.on.c-money{border-color:#ffd966;color:#ffe8a3}.cat.on.c-crypto{border-color:var(--amb);color:var(--amb)}.cat.on.c-sports{border-color:#9aa;color:#cdd}.cat.on.c-entertainment{border-color:#e08cff;color:#f0c2ff}.cat.on.c-other{border-color:#777;color:#aaa}.cat.on.c-memes{border-color:#ff6ad5;color:#ffb3ea}.cat.on.c-streamers{border-color:#53fc18;color:#b6ffa0}
 .cats .sep{width:1px;height:18px;background:var(--line);margin:0 4px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:0 28px}
 .card.kit .tri{position:absolute;right:0;top:10px;display:flex;gap:4px}
@@ -109,7 +109,7 @@ section{margin-bottom:34px;min-width:0}
 .tag.taken{color:var(--dim)}
 .tag.tr{color:var(--amb);border-color:rgba(255,176,32,.45);text-transform:none}
 .tag.heat{color:var(--fg);border-color:var(--mute)}.tag.heat.hot{color:var(--amb);border-color:var(--amb)}
-.tag.c-ai{color:#aebfff;border-color:#4a5fa8}.tag.c-animals{color:#8ff0b8;border-color:#2a7a4f}.tag.c-github{color:#fff;border-color:#777}.tag.c-tech{color:#a9d3ff;border-color:#3f6c9c}.tag.c-whitehouse{color:#ffb899;border-color:#9c4f33}.tag.c-money{color:#ffe8a3;border-color:#9c8233}.tag.c-crypto{color:var(--amb);border-color:#9c6b12}.tag.c-sports{color:#cdd;border-color:#566}.tag.c-entertainment{color:#f0c2ff;border-color:#8a4f9c}.tag.c-other{color:#aaa;border-color:#555}
+.tag.c-ai{color:#aebfff;border-color:#4a5fa8}.tag.c-animals{color:#8ff0b8;border-color:#2a7a4f}.tag.c-github{color:#fff;border-color:#777}.tag.c-tech{color:#a9d3ff;border-color:#3f6c9c}.tag.c-whitehouse{color:#ffb899;border-color:#9c4f33}.tag.c-money{color:#ffe8a3;border-color:#9c8233}.tag.c-crypto{color:var(--amb);border-color:#9c6b12}.tag.c-sports{color:#cdd;border-color:#566}.tag.c-entertainment{color:#f0c2ff;border-color:#8a4f9c}.tag.c-other{color:#aaa;border-color:#555}.tag.c-memes{color:#ffb3ea;border-color:#9c3f80}.tag.c-streamers{color:#b6ffa0;border-color:#3f8a2a}
 .stack{display:flex;gap:6px;margin:8px 0 0}
 .stack img,.stack .ph{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--bg2);border:1px solid var(--line);display:block}
 .stack .ph{font-size:13px}
@@ -179,10 +179,10 @@ const fmt$=n=>n==null?'—':n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3)
 const ago=t=>{if(!t)return '—';const s=Math.max(0,(Date.now()-t)/1000);return s<60?Math.round(s)+'s':s<3600?Math.round(s/60)+'m':s<86400?Math.round(s/3600)+'h':Math.round(s/86400)+'d'};
 const hhmm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const pct=v=>v==null?'':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${Number(v).toFixed(0)}%</span>`;
-const CATS=['ai','animals','github','tech','whitehouse','money','crypto','sports','entertainment','other'];
-const CATLABEL={ai:'ai',animals:'animals',github:'github',tech:'tech',whitehouse:'white house',money:'money',crypto:'crypto',sports:'sports',entertainment:'entertainment',other:'other'};
-const DEFAULT_ON=['ai','animals','github','tech','whitehouse','money','crypto'];
-const KIND={gtrend:'google trends',xtrend:'x trend',github:'github',hn:'hacker news',producthunt:'product hunt',market:'polymarket',coingecko:'coingecko',news:'news'};
+const CATS=['animals','memes','ai','streamers','github','tech','whitehouse','money','crypto','sports','entertainment','other'];
+const CATLABEL={ai:'ai',animals:'animals',memes:'memes',streamers:'streamers',github:'github',tech:'tech',whitehouse:'white house',money:'money',crypto:'crypto',sports:'sports',entertainment:'entertainment',other:'other'};
+const DEFAULT_ON=['animals','memes','ai','streamers','github','tech','whitehouse','money','crypto'];
+const KIND={gtrend:'google trends',xtrend:'x trend',github:'github',hn:'hacker news',producthunt:'product hunt',market:'polymarket',coingecko:'coingecko',news:'news',kym:'know your meme',kick:'kick clip','reddit-animals':'reddit','reddit-internet':'reddit'};
 const DEFAULT_WALLETS=`JDQKDrc1TQgBRvdFh56tkta5sYcDj1SoP52Eiu64rSrT wildlobster / texashedge17154 · AI tools + abstract words · Nihilism $772K
 gVDXhoGbePACvSqN7CZBtQXFW9eyJwsgudPEwSydAkx esotericpigeon · new internet objects
 4HXb7ivgvjbHC3TBesmmD9LovH8tmTv9DZsq12GMvEpU PetalS0l · viral animals
@@ -240,6 +240,7 @@ function metaFor(o){
     case 'news':return `${esc(o.src||'news')} · ${ago(o.t)} ago`;
     default:return ''}
 }
+const fmtN=n=>n==null?'':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
 // the launch kit: a name, a ticker, the image to use, the source to paste as the coin's link, and a ready tweet
 function kitFor(o){
   const n=(o.news||[])[0]||{};
@@ -259,10 +260,12 @@ function kitFor(o){
   else if(o.kind==='market')line=`${o.yes!=null?o.yes+'% yes · ':''}${fmt$(o.v24)} traded today on polymarket`;
   else if(o.kind==='coingecko')line=`#${o.rank} trending search on coingecko`;
   else if(o.kind==='news')line=`${o.src||'news'}, ${ago(o.t)} ago`;
+  else if(o.kind==='kym')line=(o.desc||'').slice(0,120)||'popping on know your meme';
+  else if(o.kind==='kick')line=`${fmtN(o.views||0)} views on kick today · ${o.streamer||''}`;
+  else if(/^reddit/.test(o.kind))line=`${fmtN(o.score||0)} upvotes on r/${o.sub||''}`;
   const tweet=`${name.toLowerCase()}.\n${line.replace(/\s+/g,' ').trim()}\n$${ticker}\n${tw?tw.url:src}`;
   return {name,ticker,img,src,tweet,tw};
 }
-const fmtN=n=>n==null?'':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
 function xBox(o,k){
   const t=k.tw;const q=o.title.replace(/^[^/]+\//,'');const p=o.preview;const mode=(data&&data.tweetMode)||'off';
   if(t)return `<div class="xt"><div class="who">${t.avatar?`<img src="${esc(t.avatar)}" alt="" referrerpolicy="no-referrer">`:''}<b>${esc(t.name)}</b> @${esc(t.handle)}${t.followers?' · '+fmtN(t.followers)+' followers':''} · ${ago(t.at)} ago · <span class="tag" style="margin:0">${o.tweetSrc==='deployer'?"deployers' tweet":'found on x'}</span></div>
@@ -288,7 +291,10 @@ function whyLine(o){const parts=[];
   else if(o.kind==='github')parts.push(`<b>${esc(o.stars||'trending')}</b> on github`);
   else if(o.kind==='producthunt')parts.push('new on product hunt');
   else if(o.kind==='market')parts.push(`<b>${fmt$(o.v24)}</b> bet today · ${o.yes!=null?o.yes+'% yes':''}`);
-  else if(o.kind==='news')parts.push(`<b>${esc(o.src||'news')}</b>`);
+  else if(o.kind==='news')parts.push(`<b>${esc(o.src||'news')}</b>${o.top?' · top story':''}`);
+  else if(o.kind==='kym')parts.push('know your meme says it is popping');
+  else if(o.kind==='kick')parts.push(`<b>${fmtN(o.views||0)}</b> views · ${esc(o.streamer||'')}${o.category?' · '+esc(o.category):''}`);
+  else if(/^reddit/.test(o.kind))parts.push(`<b>${fmtN(o.score||0)}</b> upvotes · ${o.comments} comments · r/${esc(o.sub||'')}`);
   if(o.t)parts.push(ago(o.t)+' ago');
   if(o.tweet&&!o.tweet.err)parts.push(`tweet with <b>${fmtN(o.tweet.likes||0)}</b> likes`);
   return parts.join(' · ');}
