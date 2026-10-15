@@ -25,7 +25,7 @@ const NEWS = [
 
 async function scan() {
   const now = Date.now();
-  const [chain, jrec, jtr, jorg, gt5, gtNew, dex, trUS, trGB, xt, poly, ph, gh, hn, cg, ...news] = await Promise.all([
+  const [chain, jrec, jtr, jorg, gt5, gtNew, dex, trUS, trGB, trCA, trAU, xt, poly, ph, gh, hn, cg, top, kym, kick, rdA, rdI, ...news] = await Promise.all([
     L.timed('chain creates (RPC)', () => R.recentCreates(100)),
     L.timed('Jupiter recent', () => L.jupList('recent')),
     L.timed('Jupiter trending 5m', () => L.jupList('toptrending/5m')),
@@ -35,12 +35,19 @@ async function scan() {
     L.timed('Dexscreener boosts+profiles', () => L.dexPaid()),
     L.timed('Google Trends US', () => L.googleTrends('US')),
     L.timed('Google Trends GB', () => L.googleTrends('GB')),
+    L.timed('Google Trends CA', () => L.googleTrends('CA')),
+    L.timed('Google Trends AU', () => L.googleTrends('AU')),
     L.timed('X trends', () => L.xTrends('united-states')),
     L.timed('Polymarket', () => L.polymarket()),
     L.timed('Product Hunt', () => L.productHunt()),
     L.timed('GitHub trending', () => L.githubTrending()),
     L.timed('Hacker News', () => L.hackerNews()),
     L.timed('CoinGecko trending', () => L.coingeckoTrending()),
+    L.timed('News · top stories', () => L.googleNewsTop()),
+    L.timed('Know Your Meme', () => L.kymNews()),
+    L.timed('Kick clips', () => L.kickClips()),
+    L.timed('Reddit animals', () => L.redlib('aww+AnimalsBeingBros+rarepuppers+raccoons+AnimalsBeingDerps+Eyebleach+natureismetal', 'reddit-animals')),
+    L.timed('Reddit internet', () => L.redlib('interestingasfuck+Damnthatsinteresting+nextfuckinglevel+InternetIsBeautiful+technology+artificial+memes+PublicFreakout', 'reddit-internet')),
     ...NEWS.map(([q, cat]) => L.timed('News · ' + cat, () => L.googleNews(q, cat))),
   ]);
 
@@ -63,12 +70,17 @@ async function scan() {
   // ---- COULD LAUNCH: everything off-chain, one list, categorised, with heat and a launched count ----
   const could = []; const seenK = new Set();
   const push = o => { const k = N.norm(o.title); if (!k || seenK.has(k)) return; seenK.add(k); const m = N.matchTrend(o.title.replace(/^[^/]+\//, ''), coins); o.launched = m.n; o.coins = m.coins; o.cats = N.categorize(o.title + ' ' + (o.desc || ''), o.kind, (o.news || []).map(n => n.title).join(' ')); o.heat = N.heatOf(o); could.push(o); };
-  for (const src of [trUS, trGB]) if (src.ok) for (const t of src.data) push({ kind: 'gtrend', title: t.title, url: t.url, img: t.img, t: t.t, tn: t.tn, traffic: t.traffic, geo: t.geo, news: t.news, xq: 'https://x.com/search?q=' + encodeURIComponent(t.title) + '&f=live' });
+  for (const src of [trUS, trGB, trCA, trAU]) if (src.ok) for (const t of src.data) push({ kind: 'gtrend', title: t.title, url: t.url, img: t.img, t: t.t, tn: t.tn, traffic: t.traffic, geo: t.geo, news: t.news, xq: 'https://x.com/search?q=' + encodeURIComponent(t.title) + '&f=live' });
   if (xt.ok) for (const x of xt.data) push({ kind: 'xtrend', title: x.name, url: x.url, rank: x.rank, t: now, img: null });
   if (gh.ok) for (const o of gh.data) push({ ...o });
   if (hn.ok) for (const o of hn.data) push({ ...o });
   if (ph.ok) for (const o of ph.data) push({ ...o });
   if (cg.ok) for (const o of cg.data) push({ ...o });
+  if (top.ok) for (const o of top.data) push({ ...o });
+  if (kym.ok) for (const o of kym.data) push({ ...o });
+  if (kick.ok) for (const o of kick.data) push({ ...o });
+  if (rdA.ok) for (const o of rdA.data) push({ ...o });
+  if (rdI.ok) for (const o of rdI.data) push({ ...o });
   if (poly.ok) for (const m of poly.data) push({ kind: 'market', title: m.q, url: m.url, img: m.img, t: m.created ? Date.parse(m.created) : null, v24: m.v24, vol: m.vol, yes: m.yes, mkind: m.kind });
   for (const n of news) if (n.ok) for (const o of n.data) push({ ...o });
   could.sort((a, b) => b.heat - a.heat || (b.t || 0) - (a.t || 0));
@@ -79,7 +91,7 @@ async function scan() {
   const order = could.slice().sort((a, b) => (b.cats.some(c => MAIN.has(c)) - a.cats.some(c => MAIN.has(c))) || b.heat - a.heat);
   const mode = L.tweetSearchMode();
   let budget = mode ? 24 : 0, pbudget = 70; const jobs = [];
-  const previewUrl = o => o.kind === 'gtrend' ? ((o.news || [])[0] || {}).url : (o.kind === 'market' || o.kind === 'xtrend' || o.kind === 'coingecko') ? null : (o.out || o.url);
+  const previewUrl = o => o.kind === 'gtrend' ? ((o.news || [])[0] || {}).url : (o.kind === 'market' || o.kind === 'xtrend' || o.kind === 'coingecko' || o.kind === 'kick' || o.kind === 'kym' || /^reddit/.test(o.kind)) ? null : (o.out || o.url);
   // previews first for the things that still lack a picture, then the rest, all in lane/heat order
   const porder = order.filter(o => previewUrl(o) && !/news\.google\.com/.test(previewUrl(o))).sort((a, b) => (!!a.img - !!b.img));
   for (const o of porder) { if (pbudget <= 0) break; if (L.pagePreview.length && previewCached(previewUrl(o))) { o.preview = previewCached(previewUrl(o)); continue; } pbudget--; jobs.push(limit(() => L.pagePreview(previewUrl(o)).then(p => { if (p) o.preview = p; }))); }
@@ -126,7 +138,7 @@ async function scan() {
 
   return {
     ts: now, window: win, tweetMode, picks,
-    sources: [chain, jrec, jtr, jorg, gt5, gtNew, dex, trUS, trGB, xt, poly, ph, gh, hn, cg, ...news].map(s => ({ name: s.name, ok: s.ok, n: s.ok && s.data && s.data.coins ? s.data.coins.length : s.n, ms: s.ms, err: s.err || null })),
+    sources: [chain, jrec, jtr, jorg, gt5, gtNew, dex, trUS, trGB, trCA, trAU, xt, poly, ph, gh, hn, cg, top, kym, kick, rdA, rdI, ...news].map(s => ({ name: s.name, ok: s.ok, n: s.ok && s.data && s.data.coins ? s.data.coins.length : s.n, ms: s.ms, err: s.err || null })),
     could: could.slice(0, 220), clusters, bids: bids.slice(0, 50), paid: dex.ok ? dex.data.slice(0, 40) : [], tweets, stream, coins: coins.map(c => ({ mint: c.mint, name: c.name, symbol: c.symbol, t: c.t, mc: c.mc, img: c.img, tw: c.tw, web: c.web, creator: c.creator, url: c.url })),
   };
 }
