@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
     try { await R.jupEnrich(coins); } catch (e) { }
     try { await R.metaFill(coins, 30); } catch (e) { }
     coins.sort((a, b) => (b.t || 0) - (a.t || 0));
-    const body = JSON.stringify({ ts: Date.now(), ok: chain.ok || jrec.ok, err: chain.err || null, n: coins.length, coins: coins.map(c => ({ mint: c.mint, name: c.name, symbol: c.symbol, t: c.t, mc: c.mc, img: c.img, tw: c.tw, web: c.web, creator: c.creator, url: c.url, tid: N.tweetId(c.tw), b5: c.b5, v5: c.v5, organic: c.organic })) });
+    const body = JSON.stringify({ ts: Date.now(), ok: chain.ok || jrec.ok, err: chain.err || null, n: coins.length, sigs: chain.ok ? chain.data.sigs : 0, parsed: chain.ok ? chain.data.coins.length : 0, coins: coins.map(c => ({ mint: c.mint, name: c.name, symbol: c.symbol, t: c.t, mc: c.mc, img: c.img, tw: c.tw, web: c.web, creator: c.creator, url: c.url, tid: N.tweetId(c.tw), b5: c.b5, v5: c.v5, organic: c.organic })) });
     cache = { at: Date.now(), body };
     res.status(200).end(body);
   } catch (e) { res.status(500).end(JSON.stringify({ error: String(e.message || e) })); }

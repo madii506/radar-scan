@@ -82,10 +82,13 @@ async function scan() {
 
   // ---- GETTING BIDS: Jupiter organic/trending 5m + GeckoTerminal 5m, de-duplicated, tagged with trends ----
   const bids = []; const seenB = new Set();
-  const addB = (p, src) => { if (!p.mint || seenB.has(p.mint)) return; seenB.add(p.mint); const ws = N.words(p.name + ' ' + p.symbol); bids.push({ ...p, src, trend: [...new Set(ws.map(w => trendWords.get(w)).filter(Boolean))], cats: N.categorize(p.name + ' ' + p.symbol, 'jup') }); };
+  const MAJOR = /^(wrapped sol|usd coin|tether|usdt|usdc|jupiter|raydium|bonk|dogwifhat|pudgy|jito|pyth|render|wormhole|kamino|orca|marinade|helium|drift)|backpack securities|xstock|tokenized/i;
+  const addB = (p, src) => { if (!p.mint || seenB.has(p.mint)) return; if (MAJOR.test(p.name) || (p.mc || 0) > 30e6 || /^(SOL|USDC|USDT|JUP|RAY|JTO|PYTH|KMNO|ORCA|MNDE)$/i.test(p.symbol || '')) return; seenB.add(p.mint); const ws = N.words(p.name + ' ' + p.symbol); bids.push({ ...p, src, trend: [...new Set(ws.map(w => trendWords.get(w)).filter(Boolean))], cats: N.categorize(p.name + ' ' + p.symbol, 'jup') }); };
   if (jorg.ok) jorg.data.forEach(p => addB(p, 'organic 5m'));
   if (jtr.ok) jtr.data.forEach(p => addB(p, 'trending 5m'));
   if (gt5.ok) gt5.data.forEach(p => addB({ ...p, t: Date.parse(p.created) || null, pump: null }, 'gecko 5m'));
+  // young first: what is getting bids AND is new is the meta; old majors are noise here
+  bids.sort((a, b) => { const ya = a.t ? (now - a.t) / 3600000 : 999, yb = b.t ? (now - b.t) / 3600000 : 999; return (ya < 48) === (yb < 48) ? (b.v1h || 0) - (a.v1h || 0) : ya < 48 ? -1 : 1; });
 
   const stream = coins.slice(0, 80).map(c => ({ ...c, tid: N.tweetId(c.tw) }));
 
