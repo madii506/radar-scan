@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RADAR</title>
+<meta name="description" content="Narrative radar: what is trending off-chain, what is being launched and bought on pump.fun right now, and what nobody has launched yet.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230a0b0d' stroke='%23ffb020' stroke-width='2'/%3E%3Cpath d='M16 16 L16 3 A13 13 0 0 1 27 9 Z' fill='%23ffb020' opacity='.9'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%23ffb020'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#0a0b0d;--bg2:#0f1114;--line:#1e2126;--fg:#e8e8e6;--dim:#8b9098;--mute:#5c6168;--amb:#ffb020;--grn:#3ddc84;--red:#ff5c5c;--blu:#6fb3ff;--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;--sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}html{overflow-x:hidden;background:var(--bg)}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);overflow-x:clip;-webkit-font-smoothing:antialiased}
+a{color:var(--blu);text-decoration:none}a:hover{text-decoration:underline}
+button,input{font:inherit;color:inherit}
+.wrap{max-width:1680px;margin:0 auto;padding:0 20px}@media(max-width:640px){.wrap{padding:0 14px}}
+header{position:sticky;top:0;z-index:5;background:rgba(10,11,13,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:16px;height:52px}
+.mark{display:flex;align-items:center;gap:10px;font:700 15px/1 var(--mono);letter-spacing:.14em}
+.dish{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--amb);position:relative;overflow:hidden;flex:none}
+.dish::before{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,rgba(255,176,32,.0) 0deg,rgba(255,176,32,.75) 70deg,rgba(255,176,32,0) 72deg);animation:sweep 3.2s linear infinite}
+.dish::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:var(--amb)}
+@keyframes sweep{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.dish::before{animation:none}}
+.stat{font:12px/1 var(--mono);color:var(--dim);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.stat b{color:var(--fg);font-weight:600}
+.newc{color:#0a0b0d;background:var(--amb);border-radius:4px;padding:3px 7px;font-weight:700}
+.newc.zero{background:var(--line);color:var(--dim)}
+.sp{flex:1}
+.btn{background:transparent;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:12px/1 var(--mono);cursor:pointer;color:var(--fg)}
+.btn:hover{border-color:var(--dim)}.btn.on{border-color:var(--amb);color:var(--amb)}
+input.q{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:12px/1 var(--mono);width:200px;outline:none}
+input.q:focus{border-color:var(--dim)}
+.src{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 10px;font:11px/1 var(--mono);color:var(--dim)}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.chip i{width:6px;height:6px;border-radius:50%;background:var(--mute);display:inline-block}
+.chip.ok i{background:var(--grn)}.chip.bad i{background:var(--red)}.chip.bad{color:var(--red)}
+main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr) minmax(0,1fr);gap:0 28px;padding:18px 0 60px}
+@media(max-width:1180px){main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media(max-width:760px){main{grid-template-columns:minmax(0,1fr)}}
+section{margin-bottom:34px;min-width:0}
+.eyebrow{display:flex;align-items:baseline;gap:10px;font:11px/1 var(--mono);letter-spacing:.12em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:10px}
+.eyebrow b{color:var(--amb);font-weight:600}.eyebrow span{margin-left:auto;letter-spacing:0;text-transform:none;color:var(--mute)}
+.eyebrow .why{display:block;width:100%;letter-spacing:0;text-transform:none;color:var(--mute);margin:6px 0 0;font:12px/1.4 var(--sans)}
+.card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--line);position:relative}
+.card.cl{grid-template-columns:minmax(0,1fr)}
+.card.hid{display:none}
+.im{width:48px;height:48px;border-radius:8px;background:var(--bg2);object-fit:cover;display:block;border:1px solid var(--line)}
+.ph{width:48px;height:48px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font:700 16px var(--mono);color:var(--mute)}
+.t{font-weight:600;line-height:1.3;word-break:break-word}
+.t .tk{font:12px var(--mono);color:var(--dim);font-weight:400;margin-left:6px}
+.m{font:11.5px/1.5 var(--mono);color:var(--dim);margin-top:2px;word-break:break-word}
+.m b{color:var(--fg);font-weight:600}
+.m .up{color:var(--grn)}.m .dn{color:var(--red)}.m .amb{color:var(--amb)}
+.lk{display:flex;gap:10px;flex-wrap:wrap;font:11.5px/1 var(--mono);margin-top:6px}
+.lk a{color:var(--blu)}.lk button{background:none;border:0;padding:0;color:var(--dim);cursor:pointer;font:11.5px/1 var(--mono)}.lk button:hover{color:var(--fg)}
+.tag{display:inline-block;font:10px/1 var(--mono);letter-spacing:.08em;padding:3px 6px;border-radius:4px;margin-right:6px;vertical-align:1px;border:1px solid var(--line);color:var(--dim)}
+.tag.new{background:var(--amb);color:#0a0b0d;border-color:var(--amb);font-weight:700}
+.tag.open{color:var(--grn);border-color:rgba(61,220,132,.4)}
+.tag.taken{color:var(--dim)}
+.tag.tr{color:var(--amb);border-color:rgba(255,176,32,.45)}
+.stack{display:flex;gap:6px;margin:8px 0 0}
+.stack img,.stack .ph{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--bg2);border:1px solid var(--line);display:block}
+.stack .ph{font-size:13px}
+.tw{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg2);font-size:12.5px;line-height:1.45}
+.tw .who{font:11px var(--mono);color:var(--dim);margin-bottom:3px;display:flex;gap:8px;align-items:center}
+.tw .who img{width:18px;height:18px;border-radius:50%}
+.tw .ti{display:flex;gap:6px;margin-top:6px}.tw .ti img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.empty{font:12px/1.5 var(--mono);color:var(--mute);padding:10px 0}
+.coins{font:11.5px/1.6 var(--mono);color:var(--dim);margin-top:4px}
+.coins a{color:var(--dim)}.coins a:hover{color:var(--fg)}
+.more{margin:8px 0 0;background:none;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:11px/1 var(--mono);color:var(--dim);cursor:pointer;width:100%}
+.more:hover{color:var(--fg);border-color:var(--dim)}
+.wal{grid-column:1/-1}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0 24px}
+.wal textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:8px;color:var(--fg);font:12px/1.5 var(--mono);padding:8px 10px;min-height:88px;resize:vertical}
+.wh{display:flex;align-items:baseline;gap:8px;font:12px var(--mono);color:var(--dim);border-bottom:1px solid var(--line);padding:10px 0 6px;margin-top:6px}
+.wh b{color:var(--fg)}.wh .r{margin-left:auto}
+.srv{position:absolute;left:-9999px}
+footer{display:none}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <div class="mark"><span class="dish"></span>RADAR</div>
+    <div class="stat"><span id="when">scanning…</span><span id="next"></span><span id="win"></span><span id="newc" class="newc zero">0 new</span></div>
+    <div class="sp"></div>
+    <input class="q" id="q" placeholder="filter everything…" autocomplete="off">
+    <button class="btn" id="onlyOpen" title="show only things with 0 coins on pump.fun">open only</button>
+    <button class="btn" id="rescan">scan now</button>
+  </div>
+  <div class="src" id="src"></div>
+</div></header>
+
+<div class="wrap"><main>
+  <div>
+    <section id="s-narr"><div class="eyebrow"><b>01</b> narratives now <span id="narr-n"></span><em class="why">What deployers are launching in the last window, grouped by the tweet or the words they share. Many coins from many wallets on one thing = the meta right now.</em></div><div id="narr"></div></section>
+    <section id="s-stream"><div class="eyebrow"><b>02</b> raw stream <span id="stream-n"></span><em class="why">The newest pump.fun coins, one line each, with the tweet they were sniped from.</em></div><div id="stream"></div></section>
+  </div>
+  <div>
+    <section id="s-trends"><div class="eyebrow"><b>03</b> trending, not launched <span id="trends-n"></span><em class="why">Google realtime trends (US + GB) and X trends, with how many pump.fun coins in the window already ride each one. <i style="color:var(--grn)">0 coins</i> = open.</em></div><div id="trends"></div></section>
+    <section id="s-fresh"><div class="eyebrow"><b>04</b> fresh internet objects <span id="fresh-n"></span><em class="why">New products, repos, posts and viral animal stories — the lane the best wallet on this board launches from. Named after the thing, with its real URL.</em></div><div id="fresh"></div></section>
+  </div>
+  <div>
+    <section id="s-bids"><div class="eyebrow"><b>05</b> getting bids <span id="bids-n"></span><em class="why">GeckoTerminal trending on Solana, 5-minute and 1-hour. Buys vs sells, 5m change, market cap. This is the Axiom-Pulse side of the board.</em></div><div id="bids"></div></section>
+    <section id="s-paid"><div class="eyebrow"><b>06</b> paid attention <span id="paid-n"></span><em class="why">Dexscreener boosts and new paid profiles on Solana — someone spent money to be seen.</em></div><div id="paid"></div></section>
+    <section id="s-mk"><div class="eyebrow"><b>07</b> markets <span id="mk-n"></span><em class="why">Polymarket, hottest by 24h volume and newest. Each one is a question people are already betting on.</em></div><div id="mk"></div></section>
+  </div>
+  <section class="wal" id="s-wal"><div class="eyebrow"><b>08</b> wallets <span id="wal-n"></span><em class="why">Deployer wallets you watch. One address per line, optional label after a space. Their newest pump.fun coins with the tweet behind each one.</em></div>
+    <textarea id="wtext" spellcheck="false"></textarea>
+    <div style="display:flex;gap:8px;margin:8px 0 4px"><button class="btn" id="wsave">save + reload wallets</button><span class="empty" id="wstat"></span></div>
+    <div class="wgrid" id="wal"></div>
+  </section>
+</main></div>
+<span class="srv" aria-live="polite" id="live"></span>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt$=n=>n==null?'—':n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(1)+'K':'$'+Math.round(n);
+const ago=t=>{if(!t)return '—';const s=Math.max(0,(Date.now()-t)/1000);return s<60?Math.round(s)+'s':s<3600?Math.round(s/60)+'m':s<86400?Math.round(s/3600)+'h':Math.round(s/86400)+'d'};
+const hhmm=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const pct=v=>v==null?'':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${Number(v).toFixed(0)}%</span>`;
+const DEFAULT_WALLETS=`JDQKDrc1TQgBRvdFh56tkta5sYcDj1SoP52Eiu64rSrT wildlobster / texashedge17154 · AI tools + abstract words · Nihilism $772K
+gVDXhoGbePACvSqN7CZBtQXFW9eyJwsgudPEwSydAkx esotericpigeon · new internet objects
+4HXb7ivgvjbHC3TBesmmD9LovH8tmTv9DZsq12GMvEpU PetalS0l · viral animals
+B4JXfczBjeSeSHdNCyJjcy6cnEhveLbvfhdKwwWEUSKy shoutingfish / ellengu18 · uxento discord · FTR $1.44M
+F5XvCe4233m6mHRbkkq2ZsFvqrPAnRrDBExeQy2fwagQ topfloor_boss / dv3333333 · machine gun
+timeworn2X1EwMLSzeVhdVTbVSzSCKuibKd2kQ2Lsyn growingtuna / MarioPrezldente · animal news + UsePaid
+xgCByZAn5PP5ogNnm5ztgSF5xynZq1q6f5ovSMQ5EwX dueotter · j7 sniper
+GpTJtCN4WbkwJ3uwcugMrsjip3ZQ22crkP3zNjU6USQK prokraken · j7 sniper
+Ek5FQxXfqNefNghCkrAoB1H3JCkbsUEtBpdgPzv8impv jumboorca · j7 sniper
+4aiCCg5WXQ2pVyHsPeYMxLXWMjGnx4eSFPjnLHdvfjPu WildChadMeteor
+BMAyvk2fg6YeLvjENaEgHHLEZsrW53eixfSC5NfRhMMp collector (no launches)
+AqT21DFMA9MJW8tKXQdnBDZZ7cm3NXq9gPWs6g2z78R5 collector (no launches)`;
+let seen={};try{seen=JSON.parse(localStorage.getItem('radar.seen')||'{}')}catch{}
+let onlyOpen=false;try{onlyOpen=localStorage.getItem('radar.open')==='1'}catch{}
+let data=null,newCount=0,nextAt=0,timer=null;
+const PERIOD=300;
+
+function isNew(id){return !(id in seen)}
+function markSeen(ids){const now=Date.now();for(const id of ids)if(!(id in seen))seen[id]=now;for(const k in seen)if(now-seen[k]>36e5*36)delete seen[k];try{localStorage.setItem('radar.seen',JSON.stringify(seen))}catch{}}
+function img(src,alt){return src?`<img class="im" src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph',textContent:${JSON.stringify((alt||'?').slice(0,1).toUpperCase())}}))">`:`<div class="ph">${esc((alt||'?').slice(0,1).toUpperCase())}</div>`}
+function stack(coins){return coins.slice(0,6).map(c=>c.img?`<a href="${esc(c.url)}" target="_blank" rel="noopener" title="${esc(c.name)} · ${fmt$(c.mc)}"><img src="${esc(c.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"></a>`:`<a href="${esc(c.url)}" target="_blank" rel="noopener" title="${esc(c.name)}"><div class="ph">${esc(c.symbol.slice(0,2))}</div></a>`).join('')}
+function coinLine(c){return `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a> <span>${fmt$(c.mc)}</span>`}
+function dexq(q){return 'https://dexscreener.com/search?q='+encodeURIComponent(q)}
+function copyBrief(txt){navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>{$('#live').textContent='copied'})}
+function brief(name,ticker,src,img){return `name: ${name}\nticker: ${ticker}\nsource: ${src||''}\nimage: ${img||''}`}
+function tick(ticker){return String(ticker||'').replace(/[^a-z0-9]/gi,'').slice(0,10).toUpperCase()||'TICKER'}
+function tweetBox(t){if(!t||t.err)return '';return `<div class="tw"><div class="who">${t.avatar?`<img src="${esc(t.avatar)}" alt="" referrerpolicy="no-referrer">`:''}<b>${esc(t.name)}</b> @${esc(t.handle)} · ${t.views?Number(t.views).toLocaleString()+' views':''} ${t.likes?'· '+Number(t.likes).toLocaleString()+' likes':''} · ${ago(t.at)}</div>${esc(t.text)}${t.imgs&&t.imgs.length?`<div class="ti">${t.imgs.slice(0,3).map(u=>`<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>`:''}</div>`}
+
+function renderSources(srcs){$('#src').innerHTML=srcs.map(s=>`<span class="chip ${s.ok?'ok':'bad'}" title="${esc(s.err||s.ms+'ms')}"><i></i>${esc(s.name)} ${s.ok?s.n:'✕'}</span>`).join('')}
+
+function renderNarr(d){
+  const el=$('#narr');const cls=d.clusters||[];$('#narr-n').textContent=cls.length?cls.length+' clusters':'';
+  if(!cls.length){el.innerHTML=`<div class="empty">No cluster yet — the window has ${d.window.n||0} coins and none share a tweet or a word twice.</div>`;return}
+  el.innerHTML=cls.map(cl=>{
+    const id='cl:'+cl.key;const nw=isNew(id);const t=cl.kind==='tw'?d.tweets[cl.label]:null;
+    const title=cl.kind==='tw'?(t&&!t.err?esc(t.text.split('\n')[0].slice(0,90)):'tweet '+cl.label):cl.kind==='xt'?'X trending topic '+cl.label:cl.kind==='u'?cl.label:cl.label;
+    const first=cl.coins[0]||{};
+    const links=[cl.kind==='tw'?`<a href="https://x.com/i/status/${cl.label}" target="_blank" rel="noopener">tweet ↗</a>`:'',cl.kind==='xt'?`<a href="https://x.com/i/trending/${cl.label}" target="_blank" rel="noopener">x trend ↗</a>`:'',cl.kind==='u'?`<a href="https://${esc(cl.label)}" target="_blank" rel="noopener">source ↗</a>`:'',`<a href="${dexq(cl.kind==='w'||cl.kind==='b'?cl.label:first.name||'')}" target="_blank" rel="noopener">dex search ↗</a>`,`<button onclick='copyBrief(${JSON.stringify(brief(cl.kind==='w'||cl.kind==='b'?cl.label:first.name||'',tick(first.symbol||cl.label),cl.kind==='tw'?'https://x.com/i/status/'+cl.label:first.web||first.tw||'',first.img||''))})'>copy brief</button>`].filter(Boolean).join('');
+    return `<div class="card cl" data-f="${esc((title+' '+cl.coins.map(c=>c.name+' '+c.symbol).join(' ')).toLowerCase())}" data-open="0">
+      <div class="t">${nw?'<span class="tag new">NEW</span>':''}<span class="tag">${cl.kind==='tw'?'same tweet':cl.kind==='xt'?'x trend':cl.kind==='b'?'phrase':cl.kind==='u'?'same link':'word'}</span>${cl.trend&&cl.trend.length?`<span class="tag tr">also trending: ${esc(cl.trend.join(', '))}</span>`:''}${title}</div>
+      <div class="m"><b>${cl.count} coins</b> from <b>${cl.creators}</b> wallet${cl.creators===1?'':'s'} · ${cl.perTenMin}/10min · top <b>${fmt$(cl.maxMc)}</b> · last ${ago(cl.last)} ago · score ${cl.score}</div>
+      <div class="stack">${stack(cl.coins)}</div>
+      <div class="coins">${cl.coins.slice(0,4).map(coinLine).join(' · ')}</div>
+      ${tweetBox(t)}
+      <div class="lk">${links}</div></div>`}).join('');
+}
+function renderStream(d){
+  const el=$('#stream');const st=d.stream||[];$('#stream-n').textContent=st.length?`${st.length} newest · window ${d.window.minutes||0} min`:'';
+  if(!st.length){el.innerHTML='<div class="empty">pump.fun stream unreadable this scan — see the source chips.</div>';return}
+  el.innerHTML=st.map(c=>`<div class="card" data-f="${esc((c.name+' '+c.symbol+' '+(c.desc||'')).toLowerCase())}" data-open="0">${img(c.img,c.symbol)}<div><div class="t">${isNew('c:'+c.mint)?'<span class="tag new">NEW</span>':''}<a href="${esc(c.url)}" target="_blank" rel="noopener" style="color:inherit">${esc(c.name)}</a><span class="tk">$${esc(c.symbol)}</span></div><div class="m">${ago(c.t)} ago · ${fmt$(c.mc)}${c.replies?' · '+c.replies+' replies':''}${c.tid?` · <a href="https://x.com/i/status/${c.tid}" target="_blank" rel="noopener">tweet ↗</a>`:''}${c.web&&!/x\.com|twitter\.com/.test(c.web)?` · <a href="${esc(c.web)}" target="_blank" rel="noopener">site ↗</a>`:''}</div></div></div>`).join('');
+}
+function renderTrends(d){
+  const el=$('#trends');const tr=d.trends||[];const xt=d.xtrends||[];$('#trends-n').textContent=(tr.length?tr.length+' google':'')+(xt.length?' · '+xt.length+' x':'');
+  let html='';
+  if(xt.length)html+=`<div class="m" style="margin:0 0 8px">X trending now: ${xt.slice(0,25).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.count||'')}">${esc(x.name)}</a><span class="${x.launched?'':'up'}"> ${x.launched}</span>`).join(' · ')}</div>`;
+  if(!tr.length&&!xt.length){el.innerHTML='<div class="empty">No trend feed answered this scan.</div>';return}
+  html+=tr.map(t=>{const id='t:'+t.title;const open=t.launched===0;const n=t.news[0]||{};
+    return `<div class="card" data-f="${esc((t.title+' '+t.news.map(x=>x.title).join(' ')).toLowerCase())}" data-open="${open?1:0}">${img(t.img||n.img,t.title)}<div><div class="t">${isNew(id)?'<span class="tag new">NEW</span>':''}<span class="tag ${open?'open':'taken'}">${open?'0 coins · open':t.launched+' coins'}</span>${esc(t.title)}</div>
+    <div class="m">${esc(t.traffic)} searches · ${t.geo} · ${ago(t.t)} ago${t.coins&&t.coins.length?` · on pump: ${t.coins.map(coinLine).join(', ')}`:''}</div>
+    <div class="m">${t.news.slice(0,3).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.src||'news')}: ${esc(x.title.slice(0,70))}</a>`).join('<br>')}</div>
+    <div class="lk"><a href="${esc(t.url)}" target="_blank" rel="noopener">google trends ↗</a><a href="https://x.com/search?q=${encodeURIComponent(t.title)}&f=live" target="_blank" rel="noopener">x live ↗</a><a href="${dexq(t.title)}" target="_blank" rel="noopener">dex search ↗</a><button onclick='copyBrief(${JSON.stringify(brief(t.title,tick(t.title.split(' ')[0]),n.url||t.url,t.img||n.img||''))})'>copy brief</button></div></div></div>`}).join('');
+  el.innerHTML=html;
+}
+function renderFresh(d){
+  const el=$('#fresh');const fr=(d.fresh||[]).slice();$('#fresh-n').textContent=fr.length?fr.length+' objects':'';
+  if(!fr.length){el.innerHTML='<div class="empty">No fresh-object feed answered this scan.</div>';return}
+  const label={producthunt:'product hunt',github:'github trending',hn:'hacker news','reddit-animals':'reddit · animals','reddit-internet':'reddit'};
+  el.innerHTML=fr.slice(0,70).map(o=>{const id='f:'+o.url;const open=o.launched===0;const meta=[label[o.kind]||o.kind,o.sub?'r/'+o.sub:'',o.stars?o.stars:'',o.score?o.score+' pts':'',o.comments?o.comments+' comments':'',o.t?ago(o.t)+' ago':''].filter(Boolean).join(' · ');
+    return `<div class="card" data-f="${esc((o.title+' '+(o.desc||'')).toLowerCase())}" data-open="${open?1:0}">${img(o.img,o.title)}<div><div class="t">${isNew(id)?'<span class="tag new">NEW</span>':''}<span class="tag ${open?'open':'taken'}">${open?'0 coins · open':o.launched+' coins'}</span><a href="${esc(o.url)}" target="_blank" rel="noopener" style="color:inherit">${esc(o.title)}</a></div><div class="m">${esc(meta)}${o.desc?' · '+esc(o.desc.slice(0,120)):''}${o.coins&&o.coins.length?` · on pump: ${o.coins.map(coinLine).join(', ')}`:''}</div>
+    <div class="lk"><a href="${esc(o.url)}" target="_blank" rel="noopener">open ↗</a>${o.out&&o.out!==o.url?`<a href="${esc(o.out)}" target="_blank" rel="noopener">media ↗</a>`:''}${o.hn?`<a href="${esc(o.hn)}" target="_blank" rel="noopener">hn ↗</a>`:''}<a href="${dexq(o.title.replace(/^[^/]+\//,''))}" target="_blank" rel="noopener">dex search ↗</a><button onclick='copyBrief(${JSON.stringify(brief(o.title.replace(/^[^/]+\//,''),tick(o.title.replace(/^[^/]+\//,'').split(/[\s\-_:]/)[0]),o.out||o.url,o.img||''))})'>copy brief</button></div></div></div>`}).join('');
+}
+function renderBids(d){
+  const el=$('#bids');const b=d.bids||[];$('#bids-n').textContent=b.length?b.length+' pools':'';
+  if(!b.length){el.innerHTML='<div class="empty">GeckoTerminal trending did not answer this scan.</div>';return}
+  el.innerHTML=b.map(p=>`<div class="card" data-f="${esc((p.name+' '+p.symbol).toLowerCase())}" data-open="0">${img(p.img,p.symbol)}<div><div class="t">${isNew('b:'+p.mint)?'<span class="tag new">NEW</span>':''}<span class="tag">${p.tf}</span>${p.trend&&p.trend.length?`<span class="tag tr">trending: ${esc(p.trend.join(', '))}</span>`:''}<a href="${esc(p.url||p.gt)}" target="_blank" rel="noopener" style="color:inherit">${esc(p.name)}</a><span class="tk">$${esc(p.symbol)}</span></div>
+    <div class="m"><b>${fmt$(p.mc)}</b> mc · 5m ${pct(p.ch5)} · 1h ${pct(p.ch1h)} · 5m <span class="up">${p.b5??'—'}b</span>/<span class="dn">${p.s5??'—'}s</span> · vol 1h ${fmt$(p.v1h)} · ${p.dex||''} · ${p.created?ago(Date.parse(p.created))+' old':''}${p.launched>1?` · ${p.launched} copies in window`:''}</div>
+    <div class="lk"><a href="${esc(p.url||p.gt)}" target="_blank" rel="noopener">dexscreener ↗</a><a href="${esc(p.gt)}" target="_blank" rel="noopener">gecko ↗</a>${p.mint?`<a href="https://pump.fun/coin/${esc(p.mint)}" target="_blank" rel="noopener">pump ↗</a>`:''}</div></div></div>`).join('');
+}
+function renderPaid(d){
+  const el=$('#paid');const p=d.paid||[];$('#paid-n').textContent=p.length?p.length+' tokens':'';
+  if(!p.length){el.innerHTML='<div class="empty">Dexscreener did not answer this scan.</div>';return}
+  el.innerHTML=p.map(x=>`<div class="card" data-f="${esc(((x.name||'')+' '+(x.symbol||'')+' '+(x.desc||'')).toLowerCase())}" data-open="0">${img(x.icon,x.symbol||x.mint)}<div><div class="t">${isNew('p:'+x.mint)?'<span class="tag new">NEW</span>':''}<span class="tag">${x.kind==='boost'?'boost '+(x.boost||''):'profile'}</span><a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit">${esc(x.name||x.mint.slice(0,8)+'…')}</a>${x.symbol?`<span class="tk">$${esc(x.symbol)}</span>`:''}</div>
+    <div class="m">${x.mc?`<b>${fmt$(x.mc)}</b> mc · `:''}${x.v24?`vol 24h ${fmt$(x.v24)} · `:''}${x.ch1h!=null?`1h ${pct(x.ch1h)} · `:''}${x.created?ago(x.created)+' old · ':''}${esc((x.desc||'').slice(0,140))}</div>
+    <div class="lk"><a href="${esc(x.url)}" target="_blank" rel="noopener">dexscreener ↗</a>${x.links.slice(0,3).map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.type)} ↗</a>`).join('')}</div></div></div>`).join('');
+}
+function renderMarkets(d){
+  const el=$('#mk');const m=d.markets||[];$('#mk-n').textContent=m.length?m.length+' markets':'';
+  if(!m.length){el.innerHTML='<div class="empty">Polymarket did not answer this scan.</div>';return}
+  el.innerHTML=m.map(x=>{const open=x.launched===0;return `<div class="card" data-f="${esc(x.q.toLowerCase())}" data-open="${open?1:0}">${img(x.img,x.q)}<div><div class="t">${isNew('m:'+x.id)?'<span class="tag new">NEW</span>':''}<span class="tag">${x.kind}</span><span class="tag ${open?'open':'taken'}">${open?'0 coins':x.launched+' coins'}</span><a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:inherit">${esc(x.q)}</a></div>
+    <div class="m">${x.yes!=null?`<b>${x.yes}%</b> yes · `:''}vol 24h <b>${fmt$(x.v24)}</b> · total ${fmt$(x.vol)} · ${x.created?'created '+ago(Date.parse(x.created))+' ago':''}${x.coins&&x.coins.length?` · on pump: ${x.coins.map(coinLine).join(', ')}`:''}</div>
+    <div class="lk"><a href="${esc(x.url)}" target="_blank" rel="noopener">polymarket ↗</a><a href="${dexq(x.q.split(' ').slice(0,3).join(' '))}" target="_blank" rel="noopener">dex search ↗</a></div></div></div>`}).join('');
+}
+function applyFilter(){const q=$('#q').value.trim().toLowerCase();document.querySelectorAll('.card').forEach(c=>{const f=c.dataset.f||'';const hide=(q&&!f.includes(q))||(onlyOpen&&c.dataset.open==='0'&&c.dataset.open!==undefined&&c.closest('#trends,#fresh,#mk'));c.classList.toggle('hid',!!hide)})}
+function render(d){
+  data=d;renderSources(d.sources||[]);renderNarr(d);renderStream(d);renderTrends(d);renderFresh(d);renderBids(d);renderPaid(d);renderMarkets(d);
+  const ids=[...document.querySelectorAll('.tag.new')].length;newCount=ids;$('#newc').textContent=ids+' new';$('#newc').classList.toggle('zero',!ids);document.title=(ids?'('+ids+') ':'')+'RADAR';
+  const all=[];(d.clusters||[]).forEach(c=>all.push('cl:'+c.key));(d.stream||[]).forEach(c=>all.push('c:'+c.mint));(d.trends||[]).forEach(t=>all.push('t:'+t.title));(d.fresh||[]).forEach(o=>all.push('f:'+o.url));(d.bids||[]).forEach(p=>all.push('b:'+p.mint));(d.paid||[]).forEach(p=>all.push('p:'+p.mint));(d.markets||[]).forEach(m=>all.push('m:'+m.id));markSeen(all);
+  $('#when').innerHTML='scan <b>'+hhmm(d.ts)+'</b>';$('#win').innerHTML=d.window.n?`window <b>${d.window.n}</b> coins / <b>${d.window.minutes}</b> min (${esc(d.window.src)})`:'window empty';
+  applyFilter();$('#live').textContent='scan updated '+hhmm(d.ts);
+}
+async function scan(fresh){
+  $('#when').textContent='scanning…';
+  try{const r=await fetch('/api/scan'+(fresh?'?fresh=1':''),{cache:'no-store'});const j=await r.json();if(j.error)throw new Error(j.error);render(j)}
+  catch(e){$('#when').textContent='scan failed: '+e.message}
+  nextAt=Date.now()+PERIOD*1000;
+}
+function countdown(){const s=Math.max(0,Math.round((nextAt-Date.now())/1000));$('#next').textContent='next in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');if(s<=0&&nextAt){nextAt=0;scan(false)}}
+// wallets
+function wallets(){let t=null;try{t=localStorage.getItem('radar.wallets')}catch{}return (t||DEFAULT_WALLETS)}
+function parseW(t){return t.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const [a,...r]=l.split(/\s+/);return {a,label:r.join(' ')}}).filter(w=>/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w.a))}
+async function loadWallets(){
+  const ws=parseW($('#wtext').value);$('#wstat').textContent=ws.length?'reading '+ws.length+' wallets…':'no valid addresses';if(!ws.length)return;
+  try{const r=await fetch('/api/wallets?w='+ws.map(w=>w.a).join(','),{cache:'no-store'});const j=await r.json();const rows=j.wallets||[];rows.sort((a,b)=>(b.last||0)-(a.last||0));
+    $('#wal-n').textContent=rows.length+' wallets';$('#wstat').textContent='updated '+hhmm(j.ts);
+    $('#wal').innerHTML=rows.map(w=>{const lab=(ws.find(x=>x.a===w.wallet)||{}).label||'';return `<div><div class="wh"><b>${esc(lab||w.username||w.wallet.slice(0,6)+'…')}</b>${w.username?'<span>'+esc(w.username)+'</span>':''}<a href="https://pump.fun/profile/${w.wallet}" target="_blank" rel="noopener">profile ↗</a><a href="https://solscan.io/account/${w.wallet}" target="_blank" rel="noopener">solscan ↗</a><span class="r">${w.ok?(w.count?`${w.count} coins · last ${ago(w.last)} ago${w.j7?' · j7 '+w.j7:''}`:'no launches'):'read failed'}</span></div>
+      ${w.ok?(w.coins.slice(0,6).map(c=>`<div class="card" data-f="${esc((c.name+' '+c.symbol).toLowerCase())}" data-open="0">${img(c.img,c.symbol)}<div><div class="t">${isNew('w:'+c.mint)?'<span class="tag new">NEW</span>':''}<a href="${esc(c.url)}" target="_blank" rel="noopener" style="color:inherit">${esc(c.name)}</a><span class="tk">$${esc(c.symbol)}</span>${c.complete?'<span class="tag open" style="margin-left:6px">bonded</span>':''}</div><div class="m">${ago(c.t)} ago · now ${fmt$(c.mc)} · ath <b>${fmt$(c.ath)}</b>${c.tid?` · <a href="https://x.com/i/status/${c.tid}" target="_blank" rel="noopener">tweet ↗</a>`:''}${c.web&&!/x\.com|twitter\.com/.test(c.web)?` · <a href="${esc(c.web)}" target="_blank" rel="noopener">site ↗</a>`:''}</div></div></div>`).join('')||'<div class="empty">nothing created from this wallet on pump.fun</div>'):`<div class="empty">${esc(w.err||'read failed')}</div>`}</div>`}).join('');
+    markSeen(rows.flatMap(w=>(w.coins||[]).map(c=>'w:'+c.mint)));applyFilter();
+  }catch(e){$('#wstat').textContent='wallet read failed: '+e.message}
+}
+$('#wtext').value=wallets();
+$('#wsave').onclick=()=>{try{localStorage.setItem('radar.wallets',$('#wtext').value)}catch{};loadWallets()};
+$('#q').addEventListener('input',applyFilter);
+$('#onlyOpen').classList.toggle('on',onlyOpen);$('#onlyOpen').onclick=()=>{onlyOpen=!onlyOpen;$('#onlyOpen').classList.toggle('on',onlyOpen);try{localStorage.setItem('radar.open',onlyOpen?'1':'0')}catch{};applyFilter()};
+$('#rescan').onclick=()=>scan(true);
+scan(false);loadWallets();setInterval(countdown,1000);setInterval(loadWallets,PERIOD*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&data&&Date.now()-data.ts>PERIOD*1000)scan(false)});
+</script>
+</body>
+</html>
