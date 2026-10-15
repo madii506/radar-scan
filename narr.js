@@ -4,6 +4,7 @@
   // words on the board every hour of every day; down-weighted, not hidden
   const CHRONIC = new Set('cat dog ai trump elon musk pepe bitcoin btc eth doge shib baby moon rocket chad wojak frog bonk wif pnut fart fartcoin inu kitty puppy 100x 1000x gm gn based giga sigma alpha beta retard retardio brainrot ohio rizz skibidi gyat sus test'.split(' '));
 
+  const SLUR = /n[i1]gg|f[a4]gg|retard|kike|chink|spic\b|tranny|wetback|raghead|towelhead/i;
   const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9À-ɏЀ-ӿ぀-ヿ一-鿿 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   function words(s) { return norm(s).split(' ').filter(w => w.length >= 3 && !STOP.has(w) && !/^\d+$/.test(w)); }
   function tweetId(u) { const m = String(u || '').match(/(?:x|twitter)\.com\/[^/]+\/status\/(\d+)/i) || String(u || '').match(/\/i\/status\/(\d+)/); return m ? m[1] : null; }
@@ -28,6 +29,7 @@
     for (const [key, cs] of byKey) {
       if (cs.length < 2) continue;
       const kind = key.slice(0, key.indexOf(':')); const label = key.slice(key.indexOf(':') + 1);
+      if (SLUR.test(label)) continue;
       if (kind === 'w' && CHRONIC.has(label) && cs.length < 4) continue;
       const ts = cs.map(c => c.t || 0).filter(Boolean); const first = Math.min.apply(null, ts), last = Math.max.apply(null, ts);
       const spanMin = Math.max(1, (last - first) / 60000); const ageMin = (now - last) / 60000;
@@ -61,7 +63,7 @@
     whitehouse: /\b(white house|whitehouse|trump|president|potus|senate|congress|house of representatives|election|elections|governor|biden|vance|kamala|harris|minister|parliament|kremlin|putin|zelensky|zelenskyy|israel|gaza|iran|tariff|tariffs|executive order|pentagon|fbi|cia|supreme court|democrat|democrats|republican|republicans|gop|maga|doge|epstein|shutdown|impeach|impeachment|border|ice|deportation|nato|un|united nations|ceasefire|sanctions|secretary|cabinet|rubio|hegseth|bondi|musk|newsom|aoc|obama|clinton|pelosi|schumer|jeffries|johnson|netanyahu|xi|jinping|modi|starmer|macron|merz|carney|milei|king charles|royal|prince|princess|kate|meghan|coup|protest|protests|riot|strike)\b/i,
     money: /\b(stock|stocks|shares|market|markets|nasdaq|dow|s&p|sp500|fed|rates|rate cut|inflation|cpi|earnings|ipo|billion|billions|million|millions|trillion|bank|banks|jpmorgan|goldman|layoffs|salary|tax|taxes|price|prices|gold|silver|oil|wall street|wallstreetbets|wsb|investor|investors|hedge fund|buyback|dividend|recession|gdp|treasury|bond|bonds|mortgage|housing|rent|debt|bankrupt|bankruptcy|fraud|ponzi|lottery|jackpot|powerball|mega millions|net worth|billionaire|millionaire|rich|money|cash|dollar|dollars|euro|yen|yuan|forex|tesla|tsla|nvda|aapl|amzn|msft|googl|meta|amd|intel|palantir|pltr|coreweave|robinhood|hood|backpack|xstocks)\b/i,
     tech: /\b(apple|iphone|ipad|mac|macbook|ios|android|google|pixel|microsoft|windows|xbox|tesla|spacex|starship|starlink|rocket|launch|app|apps|startup|software|hardware|chip|chips|semiconductor|quantum|browser|chrome|safari|firefox|vr|ar|headset|meta|instagram|tiktok|youtube|twitter|x\.com|reddit|discord|telegram|whatsapp|snapchat|netflix|spotify|amazon|aws|cloud|server|servers|api|update|beta|bug|hack|hacked|hacker|breach|leak|leaked|cyber|cybersecurity|password|privacy|drone|drones|ev|evs|battery|solar|nuclear|fusion|5g|6g|wifi|satellite|telescope|nasa|mars|moon|asteroid|comet|eclipse|science|physics|biotech|crispr|vaccine|fda)\b/i,
-    sports: /\b(nfl|nba|mlb|nhl|wnba|ncaa|football|soccer|basketball|baseball|hockey|tennis|golf|f1|formula 1|nascar|ufc|mma|boxing|wrestling|wwe|aew|olympics|world cup|champions league|premier league|la liga|serie a|bundesliga|ligue 1|mls|match|game|games|league|cup|playoffs|finals|coach|quarterback|touchdown|goal|goals|striker|midfielder|transfer|injury|lineup|roster|draft|trade|mvp|rookie|lacrosse|cricket|rugby|marathon|cycling|skiing|lakers|yankees|dodgers|cowboys|chiefs|eagles|celtics|warriors|knicks|heat|bulls|thunder|spurs|liverpool|arsenal|chelsea|barcelona|real madrid|psg|milan|juventus|bayern|dortmund|united|city|sunderland|salzburg|palace|torreense|messi|ronaldo|lebron|curry|mahomes|ohtani|judge|wembanyama|holmgren|collier)\b/i,
+    sports: /\b(nfl|nba|mlb|nhl|wnba|ncaa|football|soccer|basketball|baseball|hockey|tennis|golf|f1|formula 1|nascar|ufc|mma|boxing|wrestling|wwe|aew|olympics|world cup|champions league|premier league|la liga|serie a|bundesliga|ligue 1|mls|match|game|games|league|cup|playoffs|finals|coach|quarterback|touchdown|goal|goals|striker|midfielder|transfer|injury|lineup|roster|draft|trade|mvp|rookie|lacrosse|cricket|rugby|marathon|cycling|skiing|lakers|yankees|dodgers|cowboys|chiefs|eagles|celtics|warriors|knicks|heat|bulls|thunder|spurs|liverpool|arsenal|chelsea|barcelona|real madrid|psg|milan|juventus|bayern|dortmund|united|city|sunderland|salzburg|palace|torreense|messi|ronaldo|lebron|curry|mahomes|ohtani|judge|wembanyama|holmgren|collier|win on|o\/u|spread|fc|cf|sc|afc|leverkusen|inter|atletico|sevilla|napoli|roma|benfica|porto|ajax|celtic|rangers|galatasaray|fenerbahce|boca|river|flamengo)\b/i,
     entertainment: /\b(movie|movies|film|films|netflix|hbo|disney|marvel|dc|star wars|trailer|album|song|songs|singer|rapper|rap|concert|tour|grammy|grammys|oscar|oscars|emmy|emmys|actor|actress|celebrity|kardashian|jenner|swift|taylor swift|beyonce|drake|kanye|ye|bieber|rihanna|bad bunny|tv|series|season|episode|anime|manga|pokemon|pokémon|nintendo|playstation|ps5|xbox|game|gaming|gamer|fortnite|minecraft|roblox|gta|twitch|streamer|streamers|kai cenat|mrbeast|ishowspeed|xqc|podcast|rogan|comedian|comedy|snl|late night|bratz|barbie|lego|toy|toys|doll|dolls|wedding|divorce|dating|pregnant|baby|died|dies|death|rip|funeral|tragedy|arrested|arrest|lawsuit|sued|scandal|cheating|affair|viral|meme|memes|tiktoker|influencer|onlyfans)\b/i,
   };
   const CAT_ORDER = ['animals', 'ai', 'crypto', 'github', 'whitehouse', 'money', 'tech', 'sports', 'entertainment'];
@@ -81,11 +83,11 @@
     let h = 0;
     switch (o.kind) {
       case 'gtrend': h = (o.tn || 0) / 100; break;                 // 2000+ searches → 20
-      case 'xtrend': h = Math.max(1, 30 - (o.rank || 30)); break;   // rank 1 → 29
-      case 'hn': h = (o.score || 0) / 15 + (o.comments || 0) / 15; break;
+      case 'xtrend': h = Math.max(1, 20 - (o.rank || 20) * 0.6); break;   // rank 1 → 19, rank 20 → 8
+      case 'hn': h = (o.score || 0) / 40 + (o.comments || 0) / 40; break;
       case 'github': h = (o.starsToday || 0) / 150; break;
       case 'producthunt': h = 3; break;
-      case 'market': h = (o.v24 || 0) / 25000; break;
+      case 'market': h = (o.v24 || 0) / 60000; break;
       case 'coingecko': h = Math.max(1, 16 - (o.rank || 15)); break;
       case 'news': h = 2; break;
       default: h = 1;
