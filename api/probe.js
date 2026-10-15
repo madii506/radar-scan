@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
     const c = new AbortController(); const t = setTimeout(() => c.abort(), 9000);
     const r = await fetch(u, { headers: { accept: 'application/json,text/html,*/*', ...headers }, signal: c.signal }).finally(() => clearTimeout(t));
     const txt = await r.text();
-    res.status(200).end(JSON.stringify({ status: r.status, ms: Date.now() - t0, ct: r.headers.get('content-type'), len: txt.length, head: txt.slice(0, 240) }));
+    const statuses = req.query.find === 'status' ? [...new Set((txt.match(/https?:\/\/(?:x|twitter)\.com\/[A-Za-z0-9_]+\/status\/\d+/g) || []))].slice(0, 20) : undefined;
+    res.status(200).end(JSON.stringify({ status: r.status, ms: Date.now() - t0, ct: r.headers.get('content-type'), len: txt.length, head: txt.slice(0, 240), statuses }));
   } catch (e) { res.status(200).end(JSON.stringify({ error: String(e.message || e), ms: Date.now() - t0 })); }
 };
