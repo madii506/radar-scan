@@ -121,13 +121,33 @@ async function googleTrends(geo = 'US') {
   return items;
 }
 
-// X trends via trends24 (HTML, no auth). Optional source.
+// X trends via getdaytrends (HTML, no auth; trends24 is behind Cloudflare)
 async function xTrends(slug = 'united-states') {
-  const html = await fetchText(`https://trends24.in/${slug}/`, {}, 9000);
-  const m = html.match(/<ol class="trend-card__list">([\s\S]*?)<\/ol>/); if (!m) throw new Error('no trend list');
-  const out = []; const re = /<li[^>]*>[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>(?:[\s\S]*?<span class="tweet-count"[^>]*>([^<]*)<\/span>)?[\s\S]*?<\/li>/g; let x;
-  while ((x = re.exec(m[1])) && out.length < 40) { const name = x[2].replace(/<[^>]+>/g, '').trim(); if (name) out.push({ name, count: (x[3] || '').trim(), url: x[1].startsWith('http') ? x[1] : 'https://x.com/search?q=' + encodeURIComponent(name) + '&f=live' }); }
+  const html = await fetchText(`https://getdaytrends.com/${slug}/`, {}, 9000);
+  const out = []; const seen = new Set();
+  const re = new RegExp('<td class="main"><a[^>]*href="/' + slug + '/trend/[^"]*"[^>]*>([^<]+)</a>', 'g'); let x;
+  while ((x = re.exec(html)) && out.length < 50) { const name = unesc(x[1]).trim(); if (!name || seen.has(name)) continue; seen.add(name); out.push({ name, rank: out.length + 1, url: 'https://x.com/search?q=' + encodeURIComponent(name) + '&f=live' }); }
+  if (!out.length) throw new Error('no trends parsed');
   return out;
+}
+
+// Jupiter token lists (work from Vercel; pump.fun's API does not)
+function jupSlim(t) {
+  const s5 = t.stats5m || {}, s1 = t.stats1h || {};
+  return { mint: t.id, name: t.name || '', symbol: t.symbol || '', img: t.icon || null, mc: Math.round(t.mcap || t.fdv || 0), dev: t.dev || null, launchpad: t.launchpad || null, created: t.firstPool && t.firstPool.createdAt || t.createdAt || null, t: Date.parse(t.firstPool && t.firstPool.createdAt || t.createdAt || '') || null, tw: t.twitter || null, web: t.website || null, organic: t.organicScore != null ? Math.round(t.organicScore) : null, organicLabel: t.organicScoreLabel || null, holders: t.holderCount || null, b5: s5.numBuys || 0, s5: s5.numSells || 0, v5: Math.round((s5.buyVolume || 0) + (s5.sellVolume || 0)), v1h: Math.round((s1.buyVolume || 0) + (s1.sellVolume || 0)), ch5: s5.priceChange != null ? +Number(s5.priceChange).toFixed(1) : null, ch1h: s1.priceChange != null ? +Number(s1.priceChange).toFixed(1) : null, traders5: s5.numTraders || null, url: 'https://dexscreener.com/solana/' + t.id, pump: t.launchpad === 'pump.fun' ? 'https://pump.fun/coin/' + t.id : null };
+}
+async function jupList(path) { const j = await fetchJson('https://lite-api.jup.ag/tokens/v2/' + path, {}, 9000); return (Array.isArray(j) ? j : []).map(jupSlim); }
+
+// CoinGecko trending searches (what the retail crowd is typing in)
+async function coingeckoTrending() {
+  const j = await fetchJson('https://api.coingecko.com/api/v3/search/trending', {}, 8000);
+  return (j.coins || []).map((c, i) => { const it = c.item || {}; const d = it.data || {}; return { kind: 'coingecko', rank: i + 1, title: it.name + ' (' + (it.symbol || '') + ')', url: 'https://www.coingecko.com/en/coins/' + it.id, img: it.thumb || it.small || null, mcRank: it.market_cap_rank || null, ch24: d.price_change_percentage_24h && d.price_change_percentage_24h.usd != null ? +Number(d.price_change_percentage_24h.usd).toFixed(1) : null, mc: d.market_cap || null, t: null }; });
+}
+
+// Google News RSS for one query (fresh stories, no auth)
+async function googleNews(q, cat) {
+  const xml = await fetchText('https://news.google.com/rss/search?q=' + encodeURIComponent(q + ' when:1d') + '&hl=en-US&gl=US&ceid=US:en', {}, 9000);
+  return xml.split('<item>').slice(1).map(i => ({ kind: 'news', cat, title: unesc(tag(i, 'title')).replace(/\s+-\s+[^-]+$/, ''), url: tag(i, 'link'), t: Date.parse(tag(i, 'pubDate')) || null, src: unesc(tag(i, 'source')), img: null })).filter(x => x.title).slice(0, 15);
 }
 
 // Polymarket (gamma): hottest by 24h volume + newest
@@ -156,7 +176,7 @@ async function productHunt() {
 async function githubTrending() {
   const html = await fetchText('https://github.com/trending?since=daily', {}, 9000);
   const out = []; const re = /<h2 class="h3 lh-condensed">[\s\S]*?<a[^>]*href="\/([^"]+)"[\s\S]*?<\/h2>([\s\S]*?)(?=<h2 class="h3 lh-condensed">|<\/main>)/g; let m;
-  while ((m = re.exec(html)) && out.length < 30) { const repo = m[1]; const block = m[2]; const desc = unesc((block.match(/<p class="col-9[^"]*">([\s\S]*?)<\/p>/) || [])[1] || ''); const stars = unesc((block.match(/<span class="d-inline-block float-sm-right">([\s\S]*?)<\/span>/) || [])[1] || '').replace(/\s+/g, ' '); const lang = unesc((block.match(/itemprop="programmingLanguage">([^<]*)</) || [])[1] || ''); out.push({ kind: 'github', title: repo, url: 'https://github.com/' + repo, desc: desc.slice(0, 160), stars, lang, img: null, t: null }); }
+  while ((m = re.exec(html)) && out.length < 30) { const repo = m[1]; const block = m[2]; const desc = unesc((block.match(/<p class="col-9[^"]*">([\s\S]*?)<\/p>/) || [])[1] || ''); const stars = unesc((block.match(/<span class="d-inline-block float-sm-right">([\s\S]*?)<\/span>/) || [])[1] || '').replace(/\s+/g, ' '); const lang = unesc((block.match(/itemprop="programmingLanguage">([^<]*)</) || [])[1] || ''); out.push({ kind: 'github', title: repo, url: 'https://github.com/' + repo, desc: desc.slice(0, 160), stars, starsToday: parseInt(stars.replace(/[^0-9]/g, ''), 10) || 0, lang, img: null, t: null }); }
   if (!out.length) throw new Error('no repos parsed');
   return out;
 }
@@ -167,16 +187,6 @@ async function hackerNews() {
   return items.filter(i => i && i.title).map(i => ({ kind: 'hn', title: i.title, url: i.url || 'https://news.ycombinator.com/item?id=' + i.id, hn: 'https://news.ycombinator.com/item?id=' + i.id, t: (i.time || 0) * 1000, score: i.score || 0, comments: i.descendants || 0, img: null }));
 }
 
-// Reddit rising (viral animal stories, new internet things). Optional; reddit sometimes refuses cloud IPs.
-async function reddit(subs, kind) {
-  const j = await fetchJson(`https://www.reddit.com/r/${subs}/rising.json?limit=40&raw_json=1`, { headers: { 'user-agent': 'radar-scan/1.0 (narrative board)' } }, 9000);
-  return ((j.data && j.data.children) || []).map(c => c.data).filter(d => d && d.title && !d.over_18).map(d => {
-    let img = null; try { img = d.preview && d.preview.images && d.preview.images[0] && d.preview.images[0].source && d.preview.images[0].source.url || null; } catch { }
-    if (!img && d.thumbnail && /^https?:/.test(d.thumbnail)) img = d.thumbnail;
-    return { kind, title: d.title, url: 'https://www.reddit.com' + d.permalink, out: d.url_overridden_by_dest || d.url || null, sub: d.subreddit, score: d.score || 0, comments: d.num_comments || 0, t: (d.created_utc || 0) * 1000, img };
-  });
-}
-
 // fxtwitter tweet preview
 async function tweet(id) {
   const j = await fetchJson('https://api.fxtwitter.com/i/status/' + id, {}, 7000);
@@ -185,4 +195,4 @@ async function tweet(id) {
   return { id, url: t.url || 'https://x.com/i/status/' + id, text: (t.text || '').slice(0, 400), name: a.name || '', handle: a.screen_name || '', avatar: a.avatar_url || null, followers: a.followers || null, imgs: photos.concat(videos), views: t.views || null, likes: t.likes || null, rts: t.retweets || null, at: t.created_timestamp ? t.created_timestamp * 1000 : null };
 }
 
-module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, reddit };
+module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag };
