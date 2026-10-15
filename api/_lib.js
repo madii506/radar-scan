@@ -191,12 +191,33 @@ async function hackerNews() {
   return items.filter(i => i && i.title).map(i => ({ kind: 'hn', title: i.title, url: i.url || 'https://news.ycombinator.com/item?id=' + i.id, hn: 'https://news.ycombinator.com/item?id=' + i.id, t: (i.time || 0) * 1000, score: i.score || 0, comments: i.descendants || 0, img: null }));
 }
 
-// fxtwitter tweet preview
+// fxtwitter tweet (full text + media)
 async function tweet(id) {
   const j = await fetchJson('https://api.fxtwitter.com/i/status/' + id, {}, 7000);
   const t = j.tweet || {}; const a = t.author || {}; const med = t.media || {};
   const photos = (med.photos || []).map(p => p.url).slice(0, 4); const videos = (med.videos || []).map(v => v.thumbnail_url).filter(Boolean).slice(0, 2);
-  return { id, url: t.url || 'https://x.com/i/status/' + id, text: (t.text || '').slice(0, 400), name: a.name || '', handle: a.screen_name || '', avatar: a.avatar_url || null, followers: a.followers || null, imgs: photos.concat(videos), views: t.views || null, likes: t.likes || null, rts: t.retweets || null, at: t.created_timestamp ? t.created_timestamp * 1000 : null };
+  const q = t.quote ? { text: (t.quote.text || '').slice(0, 600), handle: t.quote.author && t.quote.author.screen_name || '', url: t.quote.url || null } : null;
+  return { id, url: t.url || 'https://x.com/i/status/' + id, text: (t.text || '').slice(0, 2000), name: a.name || '', handle: a.screen_name || '', avatar: a.avatar_url || null, followers: a.followers || null, imgs: photos.concat(videos), video: (med.videos || [])[0] ? (med.videos[0].url || null) : null, views: t.views || null, likes: t.likes || null, rts: t.retweets || null, replies: t.replies || null, at: t.created_timestamp ? t.created_timestamp * 1000 : null, quote: q };
 }
 
-module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag };
+// find real tweets about a topic: Bing RSS `site:x.com "<q>"` (works from Vercel; DuckDuckGo, Brave and X syndication do not)
+async function bingTweetIds(q, n = 4) {
+  const xml = await fetchText('https://www.bing.com/search?q=' + encodeURIComponent('site:x.com "' + q + '"') + '&format=rss&cc=US&setlang=en', {}, 8000);
+  const ids = []; const seen = new Set();
+  for (const item of xml.split('<item>').slice(1)) {
+    const link = unesc(tag(item, 'link')); const m = link.match(/(?:x|twitter)\.com\/([A-Za-z0-9_]+)\/status\/(\d+)/);
+    if (m && !seen.has(m[2]) && m[1] !== 'i' && m[1] !== 'search') { seen.add(m[2]); ids.push({ id: m[2], handle: m[1], title: unesc(tag(item, 'title')), desc: unesc(tag(item, 'description')).slice(0, 200) }); }
+    if (ids.length >= n) break;
+  }
+  return ids;
+}
+// best real tweet for a topic: first Bing hit that fxtwitter can read, preferring the one with the most likes among the first 3
+async function tweetFor(q) {
+  const hits = await bingTweetIds(q, 3); if (!hits.length) return null;
+  const ts = await Promise.all(hits.map(h => tweet(h.id).catch(() => null)));
+  const ok = ts.filter(Boolean); if (!ok.length) return null;
+  ok.sort((a, b) => (b.likes || 0) + (b.views || 0) / 50 - (a.likes || 0) - (a.views || 0) / 50);
+  return ok[0];
+}
+
+module.exports = { fetchText, fetchJson, timed, pumpNew, pumpByCreator, pumpUser, gtTrending, gtNewPools, dexPaid, googleTrends, xTrends, polymarket, tweet, slimCoin, productHunt, githubTrending, hackerNews, jupList, jupSlim, coingeckoTrending, googleNews, unesc, tag, bingTweetIds, tweetFor };

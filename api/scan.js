@@ -4,6 +4,10 @@ const N = require('./_narr');
 
 let cache = { at: 0, body: null };
 const tweetCache = new Map();
+const xCache = new Map(); // topic → best real tweet (or null)
+// small concurrency limiter so Bing is not hit 30 times at once
+let running = 0; const queue = [];
+function limit(fn) { return new Promise((resolve, reject) => { const run = () => { running++; fn().then(resolve, reject).finally(() => { running--; const n = queue.shift(); if (n) n(); }); }; running < 5 ? run() : queue.push(run); }); }
 async function tweetCached(id) {
   const hit = tweetCache.get(id); if (hit && Date.now() - hit.at < 15 * 60000) return hit.v;
   try { const v = await L.tweet(id); tweetCache.set(id, { at: Date.now(), v }); return v; } catch (e) { return { id, err: String(e.message || e).slice(0, 80) }; }
@@ -67,6 +71,21 @@ async function scan() {
   if (poly.ok) for (const m of poly.data) push({ kind: 'market', title: m.q, url: m.url, img: m.img, t: m.created ? Date.parse(m.created) : null, v24: m.v24, vol: m.vol, yes: m.yes, mkind: m.kind });
   for (const n of news) if (n.ok) for (const o of n.data) push({ ...o });
   could.sort((a, b) => b.heat - a.heat || (b.t || 0) - (a.t || 0));
+
+  // a real tweet for every narrative: the deployers' own tweet when the thing is already launched, else Bing → fxtwitter (budgeted, cached 2h)
+  const MAIN = new Set(['ai', 'animals', 'github', 'tech', 'whitehouse', 'money', 'crypto']);
+  const order = could.slice().sort((a, b) => (b.cats.some(c => MAIN.has(c)) - a.cats.some(c => MAIN.has(c))) || b.heat - a.heat);
+  let budget = 28; const jobs = [];
+  for (const o of order) {
+    const key = N.norm(o.title.replace(/^[^/]+\//, ''));
+    const own = (o.coins || []).map(c => N.tweetId(c.tw)).find(Boolean);
+    const hit = xCache.get(key);
+    if (own) { jobs.push(tweetCached(own).then(t => { o.tweet = t && !t.err ? t : null; o.tweetSrc = 'deployer'; })); continue; }
+    if (hit && Date.now() - hit.at < 2 * 3600e3) { o.tweet = hit.v; o.tweetSrc = hit.v ? 'search' : null; continue; }
+    if (budget <= 0 || o.kind === 'coingecko') continue; budget--;
+    jobs.push(limit(() => L.tweetFor(key.slice(0, 80)).catch(() => null).then(t => { xCache.set(key, { at: Date.now(), v: t }); o.tweet = t; o.tweetSrc = t ? 'search' : null; })));
+  }
+  await Promise.all(jobs);
 
   // clusters ↔ could-launch cross-reference
   const trendWords = new Map(); for (const o of could) if (o.kind === 'gtrend' || o.kind === 'xtrend') for (const w of N.words(o.title)) if (w.length >= 4) trendWords.set(w, o.title);
