@@ -74,7 +74,7 @@ async function scan() {
 
   // ---- COULD LAUNCH: everything off-chain, one list, categorised, with heat and a launched count ----
   const could = []; const seenK = new Set();
-  const push = o => { const k = N.norm(o.title); if (!k || seenK.has(k)) return; seenK.add(k); const m = N.matchTrend(o.title.replace(/^[^/]+\//, ''), coins); o.launched = m.n; o.coins = m.coins; o.cats = N.categorize(o.title + ' ' + (o.desc || ''), o.kind, (o.news || []).map(n => n.title).join(' ')); o.heat = N.heatOf(o); could.push(o); };
+  const push = o => { const k = N.norm(o.title); if (!k || seenK.has(k)) return; seenK.add(k); const m = N.matchTrend(o.title.replace(/^[^/]+\//, ''), coins); o.launched = m.n; o.coins = m.coins; o.cats = N.categorize(o.title + ' ' + (o.desc || ''), o.kind, (o.news || []).map(n => n.title).join(' ')); if (o.news && o.news.length) { const own = N.categorize(o.title + ' ' + (o.desc || ''), o.kind, ''); if (own.length === 1 && own[0] === 'other' && !(o.cats.length === 1 && o.cats[0] === 'other')) o.weakCats = true; } o.heat = N.heatOf(o); could.push(o); };
   for (const src of [trUS, trGB, trCA, trAU]) if (src.ok) for (const t of src.data) push({ kind: 'gtrend', title: t.title, url: t.url, img: t.img, t: t.t, tn: t.tn, traffic: t.traffic, geo: t.geo, news: t.news, xq: 'https://x.com/search?q=' + encodeURIComponent(t.title) + '&f=live' });
   if (xt.ok) for (const x of xt.data) push({ kind: 'xtrend', title: x.name, url: x.url, rank: x.rank, t: now, img: null });
   if (gh.ok) for (const o of gh.data) push({ ...o });
