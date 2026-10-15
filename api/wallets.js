@@ -11,8 +11,8 @@ module.exports = async (req, res) => {
   const ws = String(req.query && req.query.w || '').split(',').map(s => s.trim()).filter(s => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s)).slice(0, 16);
   if (!ws.length) return res.status(400).end(JSON.stringify({ error: 'w=comma,separated,wallets' }));
   const rows = await Promise.all(ws.map(async w => {
-    const hit = cache.get(w); if (hit && Date.now() - hit.at < 120000) return hit.v;
-    const r = await L.timed('creates', () => R.creatorCreates(w, 60));
+    const hit = cache.get(w); if (hit && Date.now() - hit.at < 240000) return hit.v;
+    const r = await L.timed('creates', () => R.creatorCreates(w, 160));
     const cs = r.ok ? r.data.coins : [];
     try { await R.jupEnrich(cs); } catch (e) { }
     try { await R.metaFill(cs, 12); } catch (e) { }
@@ -20,5 +20,5 @@ module.exports = async (req, res) => {
     cache.set(w, { at: Date.now(), v });
     return v;
   }));
-  res.status(200).end(JSON.stringify({ ts: Date.now(), note: 'creates found among each wallet\'s last 60 transactions; a wallet that trades a lot shows fewer creates', wallets: rows }));
+  res.status(200).end(JSON.stringify({ ts: Date.now(), note: 'creates found among each wallet\'s last 160 transactions; a wallet that trades a lot shows fewer creates', wallets: rows }));
 };

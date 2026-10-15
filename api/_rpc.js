@@ -72,8 +72,8 @@ async function creatorCreates(wallet, n = 40) {
   const sigs = await rpc('getSignaturesForAddress', [wallet, { limit: n }]);
   const ok = (sigs || []).filter(s => !s.err);
   const out = [];
-  for (let i = 0; i < ok.length; i += 20) {
-    const chunk = ok.slice(i, i + 20);
+  for (let i = 0; i < ok.length; i += 40) {
+    const chunk = ok.slice(i, i + 40);
     let txs = [];
     try { txs = await rpcBatch(chunk.map(s => ['getTransaction', [s.signature, { encoding: 'json', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }]])); }
     catch (e) { txs = await Promise.all(chunk.map(s => rpc('getTransaction', [s.signature, { encoding: 'json', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }]).catch(() => null))); }
