@@ -303,13 +303,16 @@ async function pagePreview(url) {
 async function imagesFor(q) {
   q = String(q || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!q) return [];
   const short = q.split(' ').length <= 5;
-  const [wp, cm] = await Promise.all([
+  const [ex, wp, cm] = await Promise.all([
+    // the page with exactly this name first (redirects followed: "Peanut the squirrel" → Peanut (squirrel))
+    fetchJson('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(q.replace(/ /g, '_')) + '?redirect=true', {}, 5000).catch(() => null),
     fetchJson('https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(q) + '&gsrlimit=4&prop=pageimages|description&piprop=original|thumbnail&pithumbsize=900&format=json', {}, 6000).catch(() => null),
     short ? fetchJson('https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(q) + '&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=900&format=json', {}, 6000).catch(() => null) : null,
   ]);
   const out = [];
+  if (ex && ex.type === 'standard' && (ex.originalimage || ex.thumbnail)) { const im = ex.originalimage || ex.thumbnail; if (!/\.svg/i.test(im.source)) out.push({ url: im.source, w: im.width || null, h: im.height || null, src: 'wikipedia', title: ex.title, desc: ex.description || '', page: ex.content_urls && ex.content_urls.desktop ? ex.content_urls.desktop.page : 'https://en.wikipedia.org/wiki/' + encodeURIComponent(ex.title.replace(/ /g, '_')) }); }
   const pages = wp && wp.query && wp.query.pages ? Object.values(wp.query.pages).sort((a, b) => (a.index || 0) - (b.index || 0)) : [];
-  for (const p of pages) { const im = p.thumbnail || p.original; if (im && im.source && !/\.svg/i.test(im.source)) out.push({ url: im.source, w: im.width || null, h: im.height || null, src: 'wikipedia', title: p.title, desc: p.description || '', page: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(p.title.replace(/ /g, '_')) }); }
+  for (const p of pages) { const im = p.thumbnail || p.original; if (im && im.source && !/\.svg/i.test(im.source) && !out.some(x => x.title === p.title)) out.push({ url: im.source, w: im.width || null, h: im.height || null, src: 'wikipedia', title: p.title, desc: p.description || '', page: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(p.title.replace(/ /g, '_')) }); }
   const cpages = cm && cm.query && cm.query.pages ? Object.values(cm.query.pages).sort((a, b) => (a.index || 0) - (b.index || 0)) : [];
   for (const p of cpages) { const ii = (p.imageinfo || [])[0]; if (!ii || !/^image\/(jpeg|png|webp|gif)/.test(ii.mime || '')) continue; if ((ii.width || 0) < 300) continue; out.push({ url: ii.thumburl || ii.url, w: ii.thumbwidth || ii.width || null, h: ii.thumbheight || ii.height || null, src: 'commons', title: (p.title || '').replace(/^File:/, ''), page: 'https://commons.wikimedia.org/wiki/' + encodeURIComponent(p.title) }); }
   return out.slice(0, 8);

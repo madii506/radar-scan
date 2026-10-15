@@ -6,6 +6,8 @@ let cache = { at: 0, body: null };
 let inflight = null;
 const tweetCache = new Map();
 const xCache = new Map(); // topic → best real tweet (or null)
+// the page to read behind a narrative (google trends → its first news story; markets/x trends/coins/clips/memes/reddit have no article worth reading)
+const previewUrl = o => !o ? null : o.kind === 'gtrend' ? ((o.news || [])[0] || {}).url : (o.kind === 'market' || o.kind === 'xtrend' || o.kind === 'coingecko' || o.kind === 'kick' || o.kind === 'kym' || /^reddit/.test(o.kind)) ? null : (o.out || o.url);
 const previewCached = url => { const h = L.previewCache && L.previewCache.get(url); return h && Date.now() - h.at < 6 * 3600e3 ? h.v : null; };
 // small concurrency limiter so Bing is not hit 30 times at once
 let running = 0; const queue = [];
