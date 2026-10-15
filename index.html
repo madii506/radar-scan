@@ -61,6 +61,7 @@ section{margin-bottom:34px;min-width:0}
 .xt .ft{display:flex;gap:12px;margin-top:7px;font:11px/1 var(--mono);color:var(--dim);flex-wrap:wrap;align-items:center}
 .xt .ft a{color:var(--blu)}.xt .ft button{background:none;border:0;padding:0;color:var(--dim);cursor:pointer;font:11px/1 var(--mono)}.xt .ft button:hover{color:var(--fg)}
 .xt.none{border-left-color:var(--mute);color:var(--dim);font:12px/1.5 var(--mono)}
+.xt.art{border-left-color:var(--amb)}.xt.art .md img{width:160px;height:110px}
 .sortrow{display:flex;gap:6px;align-items:center;margin:0 0 10px;font:11.5px/1 var(--mono);color:var(--dim);flex-wrap:wrap}
 .sortrow .cat{padding:4px 9px}
 #short .card.kit{border-left:2px solid var(--amb);padding-left:10px}
@@ -201,7 +202,7 @@ function tick(s){return String(s||'').replace(/[^a-z0-9]/gi,'').slice(0,10).toUp
 function catTags(cats){return (cats||[]).slice(0,3).map(c=>`<span class="tag c-${c}">${CATLABEL[c]||c}</span>`).join('')}
 function tweetBox(t){if(!t||t.err)return '';return `<div class="tw"><div class="who">${t.avatar?`<img src="${esc(t.avatar)}" alt="" referrerpolicy="no-referrer">`:''}<b>${esc(t.name)}</b> @${esc(t.handle)} · ${t.views?Number(t.views).toLocaleString()+' views':''} ${t.likes?'· '+Number(t.likes).toLocaleString()+' likes':''} · ${ago(t.at)}</div>${esc(t.text)}${t.imgs&&t.imgs.length?`<div class="ti">${t.imgs.slice(0,3).map(u=>`<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>`:''}</div>`}
 
-function renderSources(srcs){$('#src').innerHTML=srcs.map(s=>`<span class="chip ${s.ok?'ok':'bad'}" title="${esc(s.err||s.ms+'ms')}"><i></i>${esc(s.name)} ${s.ok?s.n:'✕'}</span>`).join('')}
+function renderSources(srcs){const m=(data&&data.tweetMode)||'off';$('#src').innerHTML=srcs.map(s=>`<span class="chip ${s.ok?'ok':'bad'}" title="${esc(s.err||s.ms+'ms')}"><i></i>${esc(s.name)} ${s.ok?s.n:'✕'}</span>`).join('')+`<span class="chip ${m==='off'?'':'ok'}" title="${m==='off'?'add X_BEARER or SERPER_KEY to the Vercel project to attach a real tweet to every narrative':'tweet search via '+m}"><i></i>tweet search ${m==='off'?'off · needs a key':m}</span>`}
 
 // ---- 01 could launch ----
 function renderCats(){$('#cats').innerHTML=CATS.map(c=>`<button class="cat c-${c} ${catsOn.has(c)?'on':''}" data-c="${c}">${CATLABEL[c]}</button>`).join('')+`<span class="sep"></span><button class="cat ${minHeat>=3?'on':''}" data-h="3">heat ≥ 3</button><button class="cat ${minHeat>=10?'on':''}" data-h="10">heat ≥ 10</button><span class="sep"></span><button class="cat ${showTaken?'on':''}" data-taken="1">show already launched</button>`;
@@ -229,7 +230,7 @@ function kitFor(o){
   const ws=name.split(/[\s\-_:/]+/).filter(w=>/[a-z0-9]/i.test(w)&&!/^(the|a|an|of|and|to|in|for|on|is|vs|at|by)$/i.test(w));
   const ticker=tick(ws.length>=2&&ws[0].length<=3?ws[0]+ws[1]:(ws[0]||name));
   const tw=o.tweet&&!o.tweet.err?o.tweet:null;
-  const img=o.img||n.img||(tw&&tw.imgs&&tw.imgs[0])||'';
+  const img=o.img||n.img||(tw&&tw.imgs&&tw.imgs[0])||(o.preview&&o.preview.img)||'';
   const src=o.kind==='gtrend'?(n.url||o.url):(o.out||o.url);
   let line='';
   if(o.kind==='gtrend')line=n.title?n.title.slice(0,120):`${o.traffic} searches in the last hours`;
@@ -245,12 +246,17 @@ function kitFor(o){
 }
 const fmtN=n=>n==null?'':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
 function xBox(o,k){
-  const t=k.tw;const q=o.title.replace(/^[^/]+\//,'');
-  if(!t)return `<div class="xt none" id="xt-${esc(btoa(unescape(encodeURIComponent(keyOf(o)))).replace(/[^a-z0-9]/gi,'').slice(0,40))}">no tweet found yet · <a href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">search x live ↗</a> · <button class="cp" onclick='xfind(${JSON.stringify(q)},${JSON.stringify(keyOf(o))})'>search again</button></div>`;
-  return `<div class="xt"><div class="who">${t.avatar?`<img src="${esc(t.avatar)}" alt="" referrerpolicy="no-referrer">`:''}<b>${esc(t.name)}</b> @${esc(t.handle)}${t.followers?' · '+fmtN(t.followers)+' followers':''} · ${ago(t.at)} ago · <span class="tag" style="margin:0">${o.tweetSrc==='deployer'?"deployers' tweet":'found on x'}</span></div>
+  const t=k.tw;const q=o.title.replace(/^[^/]+\//,'');const p=o.preview;const mode=(data&&data.tweetMode)||'off';
+  if(t)return `<div class="xt"><div class="who">${t.avatar?`<img src="${esc(t.avatar)}" alt="" referrerpolicy="no-referrer">`:''}<b>${esc(t.name)}</b> @${esc(t.handle)}${t.followers?' · '+fmtN(t.followers)+' followers':''} · ${ago(t.at)} ago · <span class="tag" style="margin:0">${o.tweetSrc==='deployer'?"deployers' tweet":'found on x'}</span></div>
     <div class="tx">${esc(t.text)}</div>${t.quote?`<div class="qt">↳ @${esc(t.quote.handle)}: ${esc(t.quote.text)}</div>`:''}
     ${t.imgs&&t.imgs.length?`<div class="md">${t.imgs.slice(0,4).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}
     <div class="ft">${t.views?'<b>'+fmtN(t.views)+'</b> views':''}${t.likes?' · '+fmtN(t.likes)+' likes':''}${t.rts?' · '+fmtN(t.rts)+' rts':''}${t.replies?' · '+fmtN(t.replies)+' replies':''} · <a href="${esc(t.url)}" target="_blank" rel="noopener">open tweet ↗</a> · <button onclick='copyBrief(${JSON.stringify(t.url)})'>copy link</button> · <button onclick='copyBrief(${JSON.stringify(t.text)})'>copy text</button></div></div>`;
+  const search=`<a href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">tweets about it on x ↗</a>${mode!=='off'?` · <button class="cp" style="display:inline;margin:0" onclick='xfind(${JSON.stringify(q)},${JSON.stringify(keyOf(o))})'>find a tweet</button>`:''}`;
+  if(p&&(p.desc||p.title))return `<div class="xt art"><div class="who"><b>${esc(p.site||'')}</b>${p.at?' · '+ago(p.at)+' ago':''} · <span class="tag" style="margin:0">the story</span></div>
+    ${p.title&&p.title.toLowerCase()!==o.title.toLowerCase()?`<div class="tx"><b>${esc(p.title)}</b></div>`:''}<div class="tx">${esc(p.desc||'')}</div>
+    ${p.img?`<div class="md"><a href="${esc(p.img)}" target="_blank" rel="noopener"><img src="${esc(p.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></a></div>`:''}
+    <div class="ft"><a href="${esc(p.url)}" target="_blank" rel="noopener">open ↗</a> · ${search}</div></div>`;
+  return `<div class="xt none">${mode==='off'?'no tweet attached (x search needs a key on the project) · ':'no tweet found yet · '}${search}</div>`;
 }
 async function xfind(q,key){
   const o=((data&&data.could)||[]).find(x=>keyOf(x)===key);if(!o)return;$('#live').textContent='searching x for '+q;
