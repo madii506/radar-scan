@@ -144,10 +144,14 @@ async function coingeckoTrending() {
   return (j.coins || []).map((c, i) => { const it = c.item || {}; const d = it.data || {}; return { kind: 'coingecko', rank: i + 1, title: it.name + ' (' + (it.symbol || '') + ')', url: 'https://www.coingecko.com/en/coins/' + it.id, img: it.thumb || it.small || null, mcRank: it.market_cap_rank || null, ch24: d.price_change_percentage_24h && d.price_change_percentage_24h.usd != null ? +Number(d.price_change_percentage_24h.usd).toFixed(1) : null, mc: d.market_cap || null, t: null }; });
 }
 
-// Google News RSS for one query (fresh stories, no auth)
+// Google News RSS for one query (fresh stories, no auth). The RSS link is a redirect; the real URL is usually readable inside it.
+function gnewsUrl(link) {
+  try { const id = (link.match(/\/articles\/([^?]+)/) || [])[1]; if (!id) return link; const raw = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('latin1'); const m = raw.match(/https?:\/\/[\x21-\x7e]+/); if (m) { const u = m[0].replace(/[\x00-\x1f].*$/, ''); if (/^https?:\/\/[a-z0-9.-]+\.[a-z]{2,}/i.test(u) && !/news\.google/.test(u)) return u; } } catch (e) { }
+  return link;
+}
 async function googleNews(q, cat) {
   const xml = await fetchText('https://news.google.com/rss/search?q=' + encodeURIComponent(q + ' when:1d') + '&hl=en-US&gl=US&ceid=US:en', {}, 9000);
-  return xml.split('<item>').slice(1).map(i => ({ kind: 'news', cat, title: unesc(tag(i, 'title')).replace(/\s+-\s+[^-]+$/, ''), url: tag(i, 'link'), t: Date.parse(tag(i, 'pubDate')) || null, src: unesc(tag(i, 'source')), img: null })).filter(x => x.title).slice(0, 15);
+  return xml.split('<item>').slice(1).map(i => ({ kind: 'news', cat, title: unesc(tag(i, 'title')).replace(/\s+-\s+[^-]+$/, ''), url: gnewsUrl(tag(i, 'link')), t: Date.parse(tag(i, 'pubDate')) || null, src: unesc(tag(i, 'source')), img: null })).filter(x => x.title).slice(0, 15);
 }
 
 // Polymarket (gamma): hottest by 24h volume + newest

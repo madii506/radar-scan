@@ -91,7 +91,7 @@
       case 'github': h = (o.starsToday || 0) / 150; break;
       case 'producthunt': h = 3; break;
       case 'market': h = (o.v24 || 0) / 60000; break;
-      case 'coingecko': h = Math.max(1, 16 - (o.rank || 15)); break;
+      case 'coingecko': h = Math.max(1, 7 - (o.rank || 7) * 0.5); break;   // existing tokens, rarely a launch
       case 'news': h = 2; break;
       default: h = 1;
     }
