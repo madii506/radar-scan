@@ -363,11 +363,12 @@ function renderCould(){
   const wa=winArr();const useWin=wa.length>((data&&data.coins)||[]).length;const now=Date.now();
   // the meta right now: what is being launched by many wallets and what is getting bids
   const base=wa.length>((data&&data.coins)||[]).length?wa:((data&&data.coins)||[]);
-  const cls=base.length?NARR.buildClusters(base,now).slice(0,12):(data.clusters||[]).slice(0,12);
+  const junk=/\b(upvotes?|hours?|minutes?|ago|coin|token|official|pump|fun|launch|dev|the|and|for|with|this|that|just|new|real|only)\b/i;
+  const cls=(base.length?NARR.buildClusters(base,now):(data.clusters||[])).filter(cl=>{const label=cl.kind==='tw'?((cl.coins[0]||{}).name||''):cl.kind==='u'?cl.label.split('/')[0]:cl.label;const ws=NARR.words(label);return ws.length&&!ws.every(w=>NARR.CHRONIC.has(w)||junk.test(w))&&cl.count>=3}).slice(0,12);
   const metaWords=new Map();
   for(const cl of cls){const label=cl.kind==='tw'?(cl.coins[0]||{}).name||'':cl.label;for(const w of NARR.words(label))if(w.length>=4&&!NARR.CHRONIC.has(w))metaWords.set(w,'launching: '+label+' ×'+cl.count)}
   for(const b of (data.bids||[]).slice(0,25))for(const w of NARR.words(b.name+' '+b.symbol))if(w.length>=4&&!NARR.CHRONIC.has(w))metaWords.set(w,'getting bids: '+b.name);
-  $('#meta').innerHTML=cls.length||(data.bids||[]).length?'meta now · launching: '+cls.slice(0,8).map(cl=>`<a href="#s-narr" style="color:var(--amb)">${esc(cl.kind==='tw'?((cl.coins[0]||{}).name||'tweet'):cl.label)}</a> ×${cl.count}`).join(' · ')+(data.bids&&data.bids.length?' · bids: '+data.bids.slice(0,6).map(b=>`<a href="#s-bids" style="color:var(--grn)">${esc(b.name)}</a>`).join(' · '):''):'';
+  $('#meta').innerHTML=cls.length||(data.bids||[]).length?'meta now · launching: '+cls.slice(0,8).map(cl=>`<a href="#s-narr" style="color:var(--amb)">${esc((cl.kind==='tw'?((cl.coins[0]||{}).name||'tweet'):cl.kind==='u'?cl.label.split('/').slice(0,2).join('/'):cl.label).slice(0,40))}</a> ×${cl.count}`).join(' · ')+(data.bids&&data.bids.length?' · bids: '+data.bids.slice(0,6).map(b=>`<a href="#s-bids" style="color:var(--grn)">${esc(b.name)}</a>`).join(' · '):''):'';
   const rows=all.map(o=>{let r=o;if(useWin){const m=NARR.matchTrend(o.title.replace(/^[^/]+\//,''),wa);r={...o,launched:m.n,coins:m.coins}}const ws=NARR.words(r.title.replace(/^[^/]+\//,''));const hit=ws.map(w=>metaWords.get(w)).find(Boolean);r.meta=hit||null;r.pick=NARR.pickScore(r,now)*(hit?1.5:1);return r});
   const open=rows.filter(o=>o.launched===0).length;
   // 00 picks: in your lanes, not hidden, launchable

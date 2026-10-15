@@ -116,7 +116,7 @@
     if (o.launched > 0) return 0;
     if (o.kind === 'coingecko') return 0;
     const cats = o.cats || ['other']; const lane = Math.max.apply(null, cats.map(c => LANE[c] == null ? 0.35 : LANE[c]));
-    if (cats.includes('sports') && !cats.some(c => c === 'animals' || c === 'ai' || c === 'whitehouse')) return 0;
+    if (cats.includes('sports')) { const t = ' ' + String(o.title || '').toLowerCase() + ' '; if (!(CATS.animals.test(t) || CATS.ai.test(t) || CATS.whitehouse.test(t) || CATS.memes.test(t))) return 0; }
     const age = o.t ? (now - o.t) / 3600000 : (o.kind === 'xtrend' ? 0.5 : 6);
     const fresh = age < 1 ? 1.5 : age < 3 ? 1.25 : age < 8 ? 1 : age < 24 ? 0.6 : 0.3;
     const img = o.img || (o.news && o.news[0] && o.news[0].img) || (o.preview && o.preview.img) || (o.tweet && o.tweet.imgs && o.tweet.imgs[0]);
