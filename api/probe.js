@@ -19,6 +19,8 @@ module.exports = async (req, res) => {
     const r = await fetch(u, { headers: { accept: 'application/json,text/html,*/*', ...headers }, signal: c.signal }).finally(() => clearTimeout(t));
     const txt = await r.text();
     const statuses = req.query.find === 'status' ? [...new Set((txt.match(/https?:\/\/(?:x|twitter)\.com\/[A-Za-z0-9_]+\/status\/\d+/g) || []))].slice(0, 20) : undefined;
-    res.status(200).end(JSON.stringify({ status: r.status, ms: Date.now() - t0, ct: r.headers.get('content-type'), len: txt.length, head: txt.slice(0, 240), statuses }));
+    let grep; if (req.query.grep) { try { const re = new RegExp(req.query.grep, 'g'); grep = []; let m; while ((m = re.exec(txt)) && grep.length < 8) grep.push(txt.slice(Math.max(0, m.index - 60), m.index + 340)); } catch (e) { grep = ['bad regex']; } }
+    const slice = req.query.from ? txt.slice(+req.query.from, +(req.query.to || (+req.query.from + 3000))) : undefined;
+    res.status(200).end(JSON.stringify({ status: r.status, ms: Date.now() - t0, ct: r.headers.get('content-type'), len: txt.length, head: txt.slice(0, 240), statuses, grep, slice }));
   } catch (e) { res.status(200).end(JSON.stringify({ error: String(e.message || e), ms: Date.now() - t0 })); }
 };
