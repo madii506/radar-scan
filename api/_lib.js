@@ -192,8 +192,11 @@ async function hackerNews() {
 }
 
 // Reddit via a redlib mirror (reddit.com itself refuses Vercel). Rising posts with score, comments and the picture.
+const REDLIB = ['https://safereddit.com', 'https://redlib.perennialte.ch', 'https://l.opnxng.com', 'https://redlib.nadeko.net', 'https://rl.bloat.cat'];
 async function redlib(sub, kind) {
-  const html = await fetchText(`https://safereddit.com/r/${sub}/rising`, {}, 9000);
+  let html = '', last = null;
+  for (const base of REDLIB) { try { html = await fetchText(`${base}/r/${sub}/rising`, {}, 7000); if (html.includes('class="post_title"')) break; last = new Error('no posts on ' + base.replace('https://', '') + ': ' + unesc((html.match(/<title>([^<]*)<\/title>/) || [])[1] || '').slice(0, 60)); html = ''; } catch (e) { last = e; } }
+  if (!html) throw last || new Error('no instance answered');
   const out = [];
   for (const block of html.split('<div class="post" id="').slice(1)) {
     const id = block.slice(0, block.indexOf('"'));
@@ -207,13 +210,13 @@ async function redlib(sub, kind) {
     const sr = (t[1].match(/^\/r\/([^/]+)/) || [])[1] || sub;
     out.push({ kind, title, url: 'https://www.reddit.com' + t[1], sub: sr, score, comments, t: tt, img, id });
   }
-  if (!out.length) throw new Error('no posts parsed: ' + unesc((html.match(/<title>([^<]*)<\/title>/) || [])[1] || '').slice(0, 80));
+  if (!out.length) throw new Error('no posts parsed');
   return out.slice(0, 40);
 }
 
 // Kick: the most-viewed clips today — streamer moments that are going viral right now
 async function kickClips() {
-  const j = await fetchJson('https://kick.com/api/v2/clips?sort=view&time=day', { headers: { accept: 'application/json,text/html,*/*', 'accept-language': 'en-US,en;q=0.9' } }, 9000);
+  const j = await fetchJson('https://kick.com/api/v2/clips?sort=view&time=day', { headers: { accept: 'application/json,text/html,*/*' } }, 9000);
   return (j.clips || []).map(c => { const ch = c.channel || {}; const slug = ch.slug || ch.username || ''; return { kind: 'kick', title: (c.title || '').trim() || (slug + ' clip'), url: slug ? `https://kick.com/${slug}?clip=${c.id}` : 'https://kick.com', img: c.thumbnail_url || null, views: c.view_count || c.views || 0, streamer: ch.username || slug, category: c.category && c.category.name || '', t: Date.parse(c.created_at || '') || null, duration: c.duration || null }; }).filter(c => c.title).slice(0, 30);
 }
 
